@@ -1,0 +1,16 @@
+PromptHub final repository structure
+
+Put these files/folders directly in the GitHub repository root:
+
+index.html
+product.html
+account.html
+admin.html
+legal.html
+README.md
+assets/common.js
+supabase/schema.sql
+
+IMPORTANT:
+Do not put assets/common.js under a prompt-store-main/ subfolder if the repository root already contains index.html.
+The correct path is: assets/common.js
