@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Master Image Prompt — PromptHub</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7fb;
+      color: #17171c;
+    }
+
+    nav {
+      background: white;
+      border-bottom: 1px solid #e8e8ee;
+      padding: 18px 20px;
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .logo span {
+      font-weight: 400;
+    }
+
+    .back {
+      color: #555;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 45px auto;
+      padding: 0 20px;
+    }
+
+    .product {
+      background: white;
+      border: 1px solid #e5e5eb;
+      border-radius: 20px;
+      padding: 30px;
+    }
+
+    .category {
+      font-size: 12px;
+      color: #777;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    h1 {
+      font-size: 38px;
+      margin: 8px 0;
+    }
+
+    .description {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 25px;
+    }
+
+    .price {
+      font-size: 25px;
+      font-weight: 800;
+      margin-bottom: 30px;
+    }
+
+    .prompt-box {
+      background: #17171c;
+      color: white;
+      border-radius: 15px;
+      padding: 22px;
+      margin-top: 20px;
+    }
+
+    .prompt-box h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+
+    #promptText {
+      background: #27272f;
+      padding: 18px;
+      border-radius: 10px;
+      line-height: 1.6;
+      font-size: 14px;
+      color: #ddd;
+    }
+
+    button {
+      margin-top: 15px;
+      border: 0;
+      border-radius: 9px;
+      padding: 12px 18px;
+      background: white;
+      color: #17171c;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: .9;
+    }
+
+    #message {
+      display: inline-block;
+      margin-left: 10px;
+      font-size: 13px;
+      color: #aaa;
+    }
+
+    @media(max-width:600px) {
+      .product {
+        padding: 22px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="logo">
+      Prompt<span>Hub</span>
+    </div>
+
+    <a class="back" href="index.html">
+      ← Back to Store
+    </a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="product">
+
+    <div class="category">
+      AI Images
+    </div>
+
+    <h1>
+      Master Image Prompt
+    </h1>
+
+    <p class="description">
+      Create detailed, high-quality AI images with this reusable
+      master prompt.
+    </p>
+
+    <div class="price">
+      $5
+    </div>
+
+    <div class="prompt-box">
+
+      <h2>
+        MASTER PROMPT
+      </h2>
+
+      <div id="promptText">
+        Create a high-quality, detailed AI image based on the
+        following concept. Describe the subject, environment,
+        lighting, composition, camera perspective, colors,
+        atmosphere and visual style in detail. Make the final
+        result cinematic, realistic and visually compelling.
+      </div>
+
+      <button onclick="copyPrompt()">
+        📋 Copy Prompt
+      </button>
+
+      <span id="message"></span>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+function copyPrompt() {
+
+  const text =
+    document.getElementById("promptText").innerText;
+
+  navigator.clipboard.writeText(text);
+
+  document.getElementById("message").innerText =
+    "Copied! ✓";
+
+}
+
+</script>
+
+</body>
+  </html>
