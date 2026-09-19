@@ -1,67 +1,42 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PromptHub Admin</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#f5f7fb;color:#111827}.top{background:#111827;color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center}.wrap{max-width:1100px;margin:auto;padding:18px}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000d}button{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}.blue{background:#2563eb;color:white}.red{background:#dc2626;color:white}.green{background:#16a34a;color:white}.gray{background:#e5e7eb}.login{max-width:420px;margin:70px auto}.login input,.form input,.form textarea{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:9px;margin:7px 0 12px}.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}.tab.active{background:#2563eb;color:#fff}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{background:#fff;padding:16px;border-radius:14px}.num{font-size:28px;font-weight:800;margin-top:6px}.hidden{display:none}.table{overflow:auto}.table table{width:100%;border-collapse:collapse;min-width:650px}.table th,.table td{text-align:left;padding:11px;border-bottom:1px solid #eee}.chat{display:grid;grid-template-columns:280px 1fr;gap:12px;min-height:520px}.list{background:#fff;border-radius:14px;overflow:auto}.person{width:100%;text-align:left;background:#fff;border-bottom:1px solid #eee;border-radius:0}.person.active{background:#eef2ff}.messages{background:#f8fafc;border-radius:14px;padding:14px;overflow:auto;min-height:430px}.msg{max-width:75%;padding:9px 12px;border-radius:12px;margin:8px 0}.mine{margin-left:auto;background:#2563eb;color:#fff}.theirs{background:#e5e7eb}.compose{display:flex;gap:7px;margin-top:8px}.compose input{flex:1;padding:12px;border:1px solid #ddd;border-radius:9px}.error{background:#fee2e2;color:#991b1b;padding:10px;border-radius:9px;margin-top:10px}@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.chat{grid-template-columns:1fr}.list{max-height:180px}}
 </style></head><body><div id="login" class="login card"><h2>🔐 PromptHub Admin</h2><p>Admin login</p><form id="lf"><input id="email" type="email" placeholder="Email" required><input id="pass" type="password" placeholder="Password" required><button class="blue" style="width:100%">Login</button></form><div id="err"></div>
-<div id="debugPanel" style="margin-top:14px;background:#111827;color:#e5e7eb;border-radius:12px;padding:12px;font:12px/1.5 monospace">
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-    <b style="margin-right:auto">🔧 Login Debug</b>
-    <button type="button" id="diagBtn" class="gray">Run Diagnostics</button>
-    <button type="button" id="copyBtn" class="gray">Copy Debug</button>
-    <button type="button" id="clearBtn" class="gray">Clear</button>
-  </div>
-  <div id="bootStatus" style="color:#93c5fd;margin-bottom:7px">JavaScript starting...</div>
-  <pre id="debugLog" style="white-space:pre-wrap;word-break:break-word;max-height:280px;overflow:auto;margin:0">Waiting for JavaScript...</pre>
-</div></div><div id="app" class="hidden"><div class="top"><b>PromptHub Admin</b><button id="out" class="gray">Logout</button></div><div class="wrap"><div class="tabs"><button class="tab active" data-p="dash">📊 Dashboard</button><button class="tab" data-p="customers">👥 Customers</button><button class="tab" data-p="chats">💬 Chats</button><button class="tab" data-p="payments">💳 Payments</button><button class="tab" data-p="products">📦 Products</button></div><section id="dash"><div class="stats"><div class="stat">Customers<div id="sc" class="num">0</div></div><div class="stat">Chats<div id="sh" class="num">0</div></div><div class="stat">Pending Payments<div id="sp" class="num">0</div></div><div class="stat">Products<div id="sx" class="num">0</div></div></div><div class="card"><b>Logged in as</b><div id="who"></div></div></section><section id="customers" class="hidden"><div class="card"><h2>Customers</h2><div class="table"><table><thead><tr><th>Name</th><th>User ID</th><th>Joined</th></tr></thead><tbody id="cb"></tbody></table></div></div></section><section id="chats" class="hidden"><div class="chat"><div id="people" class="list"></div><div><div id="mh" class="card">Select a customer</div><div id="msgs" class="messages">No conversation selected.</div><form id="mf" class="compose hidden"><input id="mi" placeholder="Write a message..." required><button class="blue">Send</button></form></div></div></section><section id="payments" class="hidden"><div class="card"><h2>Payment Verification</h2><div class="table"><table><thead><tr><th>ID</th><th>Customer</th><th>Order</th><th>Status</th><th>Action</th></tr></thead><tbody id="pb"></tbody></table></div></div></section><section id="products" class="hidden"><div class="card form"><h2>Add Product</h2><form id="pf"><input id="pn" placeholder="Product name" required><input id="pp" type="number" step="0.01" placeholder="Price" required><input id="pc" value="USD" placeholder="Currency"><textarea id="pd" placeholder="Description"></textarea><textarea id="pr" placeholder="Prompt" required></textarea><button class="blue">Add Product</button></form><div id="pm"></div></div><div class="card"><h2>Products</h2><div class="table"><table><thead><tr><th>Name</th><th>Price</th><th>Active</th><th>Action</th></tr></thead><tbody id="xb"></tbody></table></div></div></section></div></div><script>
-const URL='https://bwtblyvnsiguhopmxggi.supabase.co';const KEY='sb_publishable_BKBleSWgGlggg-MPaBBBcg_zTObBTW8';const db=supabase.createClient(URL,KEY);
+<div id="err"></div></div><div id="app" class="hidden"><div class="top"><b>PromptHub Admin</b><button id="out" class="gray">Logout</button></div><div class="wrap"><div class="tabs"><button class="tab active" data-p="dash">📊 Dashboard</button><button class="tab" data-p="customers">👥 Customers</button><button class="tab" data-p="chats">💬 Chats</button><button class="tab" data-p="payments">💳 Payments</button><button class="tab" data-p="products">📦 Products</button></div><section id="dash"><div class="stats"><div class="stat">Customers<div id="sc" class="num">0</div></div><div class="stat">Chats<div id="sh" class="num">0</div></div><div class="stat">Pending Payments<div id="sp" class="num">0</div></div><div class="stat">Products<div id="sx" class="num">0</div></div></div><div class="card"><b>Logged in as</b><div id="who"></div></div></section><section id="customers" class="hidden"><div class="card"><h2>Customers</h2><div class="table"><table><thead><tr><th>Name</th><th>User ID</th><th>Joined</th></tr></thead><tbody id="cb"></tbody></table></div></div></section><section id="chats" class="hidden"><div class="chat"><div id="people" class="list"></div><div><div id="mh" class="card">Select a customer</div><div id="msgs" class="messages">No conversation selected.</div><form id="mf" class="compose hidden"><input id="mi" placeholder="Write a message..." required><button class="blue">Send</button></form></div></div></section><section id="payments" class="hidden"><div class="card"><h2>Payment Verification</h2><div class="table"><table><thead><tr><th>ID</th><th>Customer</th><th>Order</th><th>Status</th><th>Action</th></tr></thead><tbody id="pb"></tbody></table></div></div></section><section id="products" class="hidden"><div class="card form"><h2>Add Product</h2><form id="pf"><input id="pn" placeholder="Product name" required><input id="pp" type="number" step="0.01" placeholder="Price" required><input id="pc" value="USD" placeholder="Currency"><textarea id="pd" placeholder="Description"></textarea><textarea id="pr" placeholder="Prompt" required></textarea><button class="blue">Add Product</button></form><div id="pm"></div></div><div class="card"><h2>Products</h2><div class="table"><table><thead><tr><th>Name</th><th>Price</th><th>Active</th><th>Action</th></tr></thead><tbody id="xb"></tbody></table></div></div></section></div></div><script>
+const URL='https://bwtblyvnsiguhopmxggi.supabase.co';
+const KEY='sb_publishable_BKBleSWgGlggg-MPaBBBcg_zTObBTW8';
 
-let DEBUG=[];
-function logDebug(msg){
-  const line=new Date().toLocaleTimeString()+"  "+String(msg);
-  DEBUG.push(line);
-  const el=document.getElementById('debugLog');
-  if(el){el.textContent=DEBUG.join("\n");el.scrollTop=el.scrollHeight;}
+function showFatalError(title,detail){
+ const el=document.getElementById('err');
+ if(el) el.innerHTML='<div style="margin-top:14px;padding:14px;border-radius:10px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca"><b>❌ '+title+'</b><pre style="white-space:pre-wrap;word-break:break-word;margin:8px 0 0;font:12px/1.5 monospace">'+String(detail||'Unknown error').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</pre></div>';
 }
-function showError(msg){
-  const el=document.getElementById('err');
-  if(el) el.innerHTML='<div class="error">'+esc(msg)+'</div>';
-  logDebug("ERROR: "+msg);
-}
-function clearDebug(){DEBUG=[];logDebug("Debug cleared.");}
-async function copyDebug(){
-  try{
-    await navigator.clipboard.writeText(DEBUG.join("\n"));
-    logDebug("Debug copied to clipboard.");
-  }catch(e){logDebug("Copy failed: "+(e.message||e));}
-}
-window.addEventListener('error',e=>logDebug("JS ERROR: "+e.message+" @ "+e.filename+":"+e.lineno));
-window.addEventListener('unhandledrejection',e=>logDebug("PROMISE ERROR: "+(e.reason?.message||e.reason||"Unknown rejection")));
+window.onerror=function(message,source,line,col,error){showFatalError('JavaScript Error',(message||'Unknown error')+'\n\nLine: '+line+', Column: '+col);};
+window.onunhandledrejection=function(e){showFatalError('Promise Error',e.reason?.message||String(e.reason||'Unknown rejection'));};
 
-async function runDiagnostics(){
-  logDebug("========== DIAGNOSTICS ==========");
-  try{
-    logDebug("Supabase library: "+(window.supabase?"LOADED":"NOT LOADED"));
-    const s=await db.auth.getSession();
-    logDebug("getSession: "+(s.data?.session?"SESSION PRESENT":"NO SESSION")+(s.error?" | "+s.error.message:""));
-    const u=await db.auth.getUser();
-    logDebug("getUser: "+(u.data?.user?.email||"NO USER")+(u.error?" | "+u.error.message:""));
-    if(u.data?.user){
-      const pr=await db.from('profiles').select('id,role,full_name').eq('id',u.data.user.id).maybeSingle();
-      logDebug("profiles SELECT: "+(pr.error?("ERROR "+pr.error.message+" | code "+pr.error.code):JSON.stringify(pr.data)));
-    }
-    logDebug("Supabase URL: "+URL);
-    logDebug("Diagnostics complete.");
-  }catch(e){logDebug("Diagnostics exception: "+(e.message||e));}
+let db;
+try{
+ if(!window.supabase) throw new Error('Supabase library did not load. The CDN/network connection failed.');
+ db=window.supabase.createClient(URL,KEY);
+}catch(e){showFatalError('Startup Error',e.message||String(e));throw e;}
+
+let me=null,conv=null,timer=null;const $=x=>document.getElementById(x);const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+async function admin(){
+ const gu=await db.auth.getUser();
+ if(gu.error){showFatalError('Auth Error',gu.error.message);return false;}
+ const user=gu.data?.user;
+ if(!user)return false;
+ const pr=await db.from('profiles').select('role').eq('id',user.id).maybeSingle();
+ if(pr.error){showFatalError('Profile Error',pr.error.message);return false;}
+ if(!pr.data||pr.data.role!=='admin'){showFatalError('Access Error','This account is not marked as admin.');return false;}
+ me=user;$('who').textContent=user.email;return true;
 }
-function wireDebugButtons(){
-  document.getElementById('diagBtn')?.addEventListener('click',runDiagnostics);
-  document.getElementById('copyBtn')?.addEventListener('click',copyDebug);
-  document.getElementById('clearBtn')?.addEventListener('click',clearDebug);
-  logDebug("Debug buttons wired successfully.");
-  const bs=document.getElementById('bootStatus');
-  if(bs) bs.textContent="JavaScript loaded successfully.";
-}let me=null,conv=null,timer=null;const $=x=>document.getElementById(x);const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-async function admin(){logDebug("Checking current user...");const gu=await db.auth.getUser();if(gu.error){showError(gu.error.message);logDebug("getUser error code: "+(gu.error.code||""));return false}const user=gu.data?.user;if(!user){logDebug("No authenticated user.");return false}logDebug("Authenticated user: "+user.email);const pr=await db.from('profiles').select('role').eq('id',user.id).maybeSingle();if(pr.error){showError("Profile query failed: "+pr.error.message);logDebug("Profile error code: "+(pr.error.code||""));return false}logDebug("Profile role: "+(pr.data?.role||"NONE"));if(!pr.data||pr.data.role!=='admin'){showError("This account is not marked as admin.");return false}me=user;$('who').textContent=user.email;return true}
-async function start(){logDebug("Starting admin session...");try{if(!(await admin())){logDebug("Admin check failed; staying on login.");return}$('login').classList.add('hidden');$('app').classList.remove('hidden');logDebug("Admin access granted.");await loadAll();timer=setInterval(()=>{if(conv)messages()},3000)}catch(e){showError(e.message||String(e));logDebug("Start exception: "+(e.message||e));}}
-$('lf').onsubmit=async e=>{e.preventDefault();$('err').innerHTML='';logDebug("Login button clicked.");const email=$('email').value.trim();logDebug("Signing in: "+email);try{const r=await db.auth.signInWithPassword({email,password:$('pass').value});if(r.error){showError(r.error.message);logDebug("Sign-in code: "+(r.error.code||""));return}logDebug("Sign-in succeeded.");await start();}catch(err){showError(err.message||String(err));}};$('out').onclick=async()=>{await db.auth.signOut();location.reload()}
-function wireDebugButtons(){const c=$('copyBtn'),x=$('clearBtn'),d=$('diagBtn');if(c)c.addEventListener('click',copyDebug);if(x)x.addEventListener('click',clearDebug);if(d)d.addEventListener('click',runDiagnostics);logDebug('Debug buttons wired successfully.');}
+async function start(){
+ try{
+  if(!(await admin()))return;
+  $('login').classList.add('hidden');$('app').classList.remove('hidden');
+  await loadAll();timer=setInterval(()=>{if(conv)messages()},3000);
+ }catch(e){showFatalError('Admin Error',e.message||String(e));}
+}
+$('lf').onsubmit=async e=>{e.preventDefault();$('err').innerHTML='';try{const r=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});if(r.error){showFatalError('Login Error',r.error.message);return}await start();}catch(err){showFatalError('Login Error',err.message||String(err));}};
+$('out').onclick=async()=>{await db.auth.signOut();location.reload()}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');['dash','customers','chats','payments','products'].forEach(x=>$(x).classList.toggle('hidden',x!==b.dataset.p));if(b.dataset.p==='chats')chatPeople()});
 async function loadAll(){const [c,h,p,x]=await Promise.all([db.from('profiles').select('id',{count:'exact',head:true}).neq('role','admin'),db.from('conversations').select('id',{count:'exact',head:true}),db.from('payment_submissions').select('id',{count:'exact',head:true}).eq('status','pending'),db.from('products').select('id',{count:'exact',head:true})]);$('sc').textContent=c.count||0;$('sh').textContent=h.count||0;$('sp').textContent=p.count||0;$('sx').textContent=x.count||0;customers();payments();products();}
 async function customers(){const {data,error}=await db.from('profiles').select('id,full_name,created_at,role').neq('role','admin').order('created_at',{ascending:false});$('cb').innerHTML=error?'<tr><td colspan=3>'+esc(error.message)+'</td></tr>':(data||[]).map(x=>'<tr><td>'+esc(x.full_name||'Customer')+'</td><td>'+esc(x.id)+'</td><td>'+new Date(x.created_at).toLocaleString()+'</td></tr>').join('')||'<tr><td colspan=3>No customers yet</td></tr>'}
@@ -69,7 +44,5 @@ async function chatPeople(){const {data,error}=await db.from('conversations').se
 window.pick=async id=>{conv=id;$('mf').classList.remove('hidden');await chatPeople();await messages()};async function messages(){if(!conv)return;const {data,error}=await db.from('messages').select('sender_id,message,created_at').eq('conversation_id',conv).order('created_at',{ascending:true});$('mh').textContent='Private customer chat';$('msgs').innerHTML=error?'<div class="error">'+esc(error.message)+'</div>':(data||[]).map(x=>'<div class="msg '+(x.sender_id===me.id?'mine':'theirs')+'">'+esc(x.message)+'</div>').join('')||'No messages yet';$('msgs').scrollTop=$('msgs').scrollHeight}
 $('mf').onsubmit=async e=>{e.preventDefault();const m=$('mi').value.trim();if(!m||!conv)return;const {error}=await db.from('messages').insert({conversation_id:conv,sender_id:me.id,message:m});if(error)alert(error.message);else{$('mi').value='';messages()}};
 async function payments(){const {data,error}=await db.from('payment_submissions').select('id,customer_id,order_id,status').order('created_at',{ascending:false});$('pb').innerHTML=error?'<tr><td colspan=5>'+esc(error.message)+'</td></tr>':(data||[]).map(x=>'<tr><td>#'+x.id+'</td><td>'+esc(x.customer_id)+'</td><td>#'+x.order_id+'</td><td>'+esc(x.status)+'</td><td>'+(x.status==='pending'?'<button class="green" onclick="pay('+x.id+',\'approved\')">Approve</button> <button class="red" onclick="pay('+x.id+',\'rejected\')">Reject</button>':'-')+'</td></tr>').join('')||'<tr><td colspan=5>No payments yet</td></tr>'}window.pay=async(id,status)=>{const {error}=await db.from('payment_submissions').update({status}).eq('id',id);if(error)alert(error.message);payments();loadAll()};
-$('pf').onsubmit=async e=>{e.preventDefault();const {error}=await db.from('products').insert({name:$('pn').value.trim(),price:Number($('pp').value),currency:$('pc').value.trim()||'USD',description:$('pd').value.trim(),prompt:$('pr').value,active:true});if(error){$('pm').innerHTML='<div class="error">'+esc(error.message)+'</div>';return}$('pf').reset();$('pc').value='USD';$('pm').textContent='Product added';products();loadAll()};async function products(){const {data,error}=await db.from('products').select('id,name,price,currency,active').order('id',{ascending:false});$('xb').innerHTML=error?'<tr><td colspan=4>'+esc(error.message)+'</td></tr>':(data||[]).map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.price)+' '+esc(x.currency)+'</td><td>'+x.active+'</td><td><button class="'+(x.active?'red':'green')+'" onclick="toggle('+x.id+','+(!x.active)+')">'+(x.active?'Deactivate':'Activate')+'</button></td></tr>').join('')||'<tr><td colspan=4>No products yet</td></tr>'}window.toggle=async(id,a)=>{const {error}=await db.from('products').update({active:a}).eq('id',id);if(error)alert(error.message);products()};wireDebugButtons();
-logDebug('Page boot complete.');
 start();
 </script></body></html>
