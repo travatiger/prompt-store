@@ -72,6 +72,8 @@
 
   var db = null;
   var initError = null;
+  // Keep the REST endpoint values available to pages that need a fallback.
+  CONFIG.supabaseUrl = String(CONFIG.supabaseUrl).replace(/\/$/, '');
   try {
     if (!window.supabase) {
       throw new Error('The Supabase library did not load (network problem or blocked CDN).');
@@ -92,4 +94,3 @@
     initError: initError
   };
 })();
-                  
