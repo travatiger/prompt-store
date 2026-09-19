@@ -3,185 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="PromptHub prompt details.">
 <title>Prompt — PromptHub</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-[hidden]{display:none!important}
-body{font-family:Arial,sans-serif;background:#f7f7fb;color:#17171c;line-height:1.6}
-a{text-decoration:none;color:inherit}
-.nav{background:#fff;border-bottom:1px solid #e8e8ee;padding:17px 20px}
-.nav-inner{max-width:1050px;margin:auto;display:flex;align-items:center;justify-content:space-between}
-.logo{font-size:22px;font-weight:800}.logo span{font-weight:400}
-.back{color:#555;font-size:14px}
-.container{max-width:900px;margin:45px auto;padding:0 20px}
-.product{background:#fff;border:1px solid #e4e4eb;border-radius:22px;padding:35px}
-.top{display:flex;gap:30px;align-items:center;margin-bottom:30px}
-.visual{width:210px;height:180px;background:#eeeef4;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:65px;flex-shrink:0}
-.category{font-size:12px;color:#6b6b75;text-transform:uppercase;letter-spacing:1px}
-h1{font-size:38px;line-height:1.15;margin:7px 0}
-.description{color:#666;margin:12px 0 15px}
-.price{font-size:26px;font-weight:800}
-.prompt-box{margin-top:10px;background:#17171c;color:white;border-radius:17px;padding:23px}
-.prompt-box h2{font-size:18px;margin-bottom:13px}
-#promptText{background:#292930;color:#ddd;border-radius:10px;padding:18px;font-size:14px;white-space:pre-wrap;word-break:break-word}
-.copy{margin-top:15px;border:0;border-radius:9px;padding:12px 18px;background:#fff;color:#17171c;font-weight:800;cursor:pointer;font-family:inherit;font-size:14px}
-#message{margin-left:10px;color:#aaa;font-size:13px}
-.buy-box{margin-top:10px;background:#f1f1f7;border:1px solid #e4e4eb;border-radius:17px;padding:23px}
-.buy-box h2{font-size:18px;margin-bottom:8px}
-.buy-box p{color:#555;font-size:14px}
-.buy{margin-top:16px;border:0;border-radius:10px;padding:13px 20px;background:#17171c;color:#fff;font-weight:800;cursor:pointer;font-family:inherit;font-size:15px}
-.buy:disabled{opacity:.6;cursor:wait}
-#buyMsg{margin-top:12px;font-size:14px;color:#991b1b}
-.state{text-align:center;color:#555;padding:40px 10px}
-.state a{text-decoration:underline}
-.note{margin-top:20px;color:#6b6b75;font-size:13px}
-@media(max-width:650px){.top{flex-direction:column;align-items:flex-start}.visual{width:100%;height:150px}h1{font-size:30px}.product{padding:23px}}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#f7f7fb;color:#17171c;line-height:1.5}
+a{text-decoration:none;color:inherit}.nav{background:#fff;border-bottom:1px solid #e9e9ef}.nav-inner{max-width:950px;margin:auto;padding:16px 20px;display:flex;align-items:center;gap:20px}.logo{font-size:22px;font-weight:800;margin-right:auto}.logo span{font-weight:400}.btn{border:0;border-radius:10px;padding:11px 17px;background:#17171c;color:#fff;font-weight:700;cursor:pointer;display:inline-block}.wrap{max-width:850px;margin:45px auto;padding:0 20px}.back{display:inline-block;margin-bottom:20px;color:#666}.box{background:#fff;border:1px solid #e7e7ed;border-radius:20px;padding:30px}.icon{height:150px;border-radius:15px;background:#eeeef4;display:flex;align-items:center;justify-content:center;font-size:58px;margin-bottom:25px}.product-image,.product-video{display:block;width:100%;max-height:520px;object-fit:contain;background:#111;border-radius:15px;margin-bottom:20px}.badge{font-size:12px;color:#666;text-transform:uppercase;letter-spacing:.7px}.title{font-size:clamp(30px,6vw,48px);margin:7px 0 12px}.desc{color:#666;font-size:16px;margin-bottom:25px}.price{font-size:24px;font-weight:800;margin-bottom:20px}.notice{background:#fff;border:1px dashed #d5d5df;border-radius:15px;padding:25px;text-align:center;color:#555}.error{color:#a22}.actions{display:flex;gap:10px;flex-wrap:wrap}
 </style>
 </head>
 <body>
-<nav class="nav">
-<div class="nav-inner">
+<nav class="nav"><div class="nav-inner">
 <a class="logo" href="index.html">Prompt<span>Hub</span></a>
-<a class="back" href="index.html">← Back to Store</a>
-</div>
-</nav>
-
-<main class="container">
-<section class="product">
-<div class="state" id="state" role="status">Loading…</div>
-
-<div id="content" hidden>
-<div class="top">
-<div class="visual" id="visual" aria-hidden="true"></div>
-<div>
-<div class="category" id="category"></div>
-<h1 id="title"></h1>
-<p class="description" id="description"></p>
-<div class="price" id="price"></div>
-</div>
-</div>
-
-<div class="buy-box" id="buyBox" hidden>
-<h2>🔒 Unlock this prompt</h2>
-<p id="buyText"></p>
-<button class="buy" id="buyBtn" type="button"></button>
-<div id="buyMsg" role="alert"></div>
-</div>
-
-<div class="prompt-box" id="promptBox" hidden>
-<h2>MASTER PROMPT</h2>
-<div id="promptText"></div>
-<button class="copy" id="copyBtn" type="button">📋 Copy Prompt</button>
-<span id="message" role="status"></span>
-</div>
-
-<p class="note">Payments are verified manually. Once your payment is approved the prompt unlocks on this page and in your account.</p>
-</div>
-</section>
+<a class="btn" href="account.html">Account</a>
+</div></nav>
+<main class="wrap">
+<a class="back" href="index.html">← Back to prompts</a>
+<div id="status" class="notice">Loading prompt…</div>
+<div id="content" hidden></div>
 </main>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/common.js"></script>
 <script>
-(function () {
-  'use strict';
-  var PH = window.PH;
-  var $ = function (id) { return document.getElementById(id); };
-  var product = null;
-  var promptText = '';
-
-  function stateMessage(html) {
-    $('content').hidden = true;
-    $('state').hidden = false;
-    $('state').innerHTML = html;
-  }
-  function notFound() {
-    stateMessage('This prompt was not found. <a href="index.html">Back to the store</a>');
-  }
-
-  function renderProduct() {
-    var c = PH.CATEGORIES[product.category] || { label: product.category, icon: '📦' };
-    document.title = product.name + ' — PromptHub';
-    $('visual').textContent = c.icon;
-    $('category').textContent = c.label;
-    $('title').textContent = product.name;
-    $('description').textContent = product.description;
-    $('price').textContent = PH.money(product.price, product.currency);
-    $('state').hidden = true;
-    $('content').hidden = false;
-  }
-
-  function showPrompt(text) {
-    promptText = text;
-    $('buyBox').hidden = true;
-    $('promptBox').hidden = false;
-    $('promptText').textContent = text;
-  }
-
-  function showBuy(loggedIn) {
-    $('promptBox').hidden = true;
-    $('buyBox').hidden = false;
-    var free = Number(product.price) === 0;
-    $('buyText').textContent = loggedIn
-      ? 'Place an order, pay, and submit your transaction ID. The full prompt appears here once the payment is verified.'
-      : 'Log in or create a free account to order this prompt.';
-    $('buyBtn').textContent = loggedIn
-      ? (free ? 'Get this prompt (free)' : 'Buy for ' + PH.money(product.price, product.currency))
-      : 'Log in to buy';
-    $('buyBtn').onclick = function () { buy(loggedIn); };
-  }
-
-  async function buy(loggedIn) {
-    if (!loggedIn) {
-      location.href = 'account.html?next=' + encodeURIComponent('product.html?id=' + product.id);
-      return;
-    }
-    var btn = $('buyBtn');
-    btn.disabled = true;
-    $('buyMsg').textContent = '';
-    var r = await PH.db.rpc('create_order', { p_product_id: product.id });
-    if (r.error) {
-      $('buyMsg').textContent = r.error.message;
-      btn.disabled = false;
-      return;
-    }
-    location.href = 'account.html#orders';
-  }
-
-  $('copyBtn').addEventListener('click', async function () {
-    var ok = await PH.copyText(promptText);
-    var m = $('message');
-    m.textContent = ok ? 'Copied! ✓' : 'Could not copy automatically. Please select the text and copy it manually.';
-    setTimeout(function () { m.textContent = ''; }, 2500);
-  });
-
-  async function init() {
-    if (PH.initError) { stateMessage('Could not load this page: ' + PH.esc(PH.initError.message)); return; }
-
-    var id = new URLSearchParams(location.search).get('id');
-    if (!/^\d{1,12}$/.test(id || '')) { notFound(); return; }
-
-    var r = await PH.db.from('products')
-      .select('id,name,category,description,price,currency')
-      .eq('id', Number(id))
-      .maybeSingle();
-    if (r.error) { stateMessage('Could not load this prompt: ' + PH.esc(r.error.message)); return; }
-    if (!r.data) { notFound(); return; }
-    product = r.data;
-    renderProduct();
-
-    var s = await PH.db.auth.getSession();
-    var loggedIn = !!(s.data && s.data.session);
-    if (loggedIn) {
-      var pr = await PH.db.rpc('get_my_prompt', { p_product_id: product.id });
-      if (!pr.error && pr.data) { showPrompt(pr.data); return; }
-    }
-    showBuy(loggedIn);
-  }
-
-  init();
+(function(){
+'use strict';
+var URL='https://bwtblyvnsiguhopmxggi.supabase.co';
+var KEY='sb_publishable_BKBleSWgGlggg-MPaBBBcg_zTObBTW8';
+var cats={image:{label:'AI Images',icon:'🖼️'},video:{label:'AI Video',icon:'🎬'},youtube:{label:'YouTube',icon:'▶️'},business:{label:'Business',icon:'💼'}};
+var status=document.getElementById('status'), content=document.getElementById('content');
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]})}
+function money(n,c){try{return new Intl.NumberFormat('en-US',{style:'currency',currency:c||'USD',minimumFractionDigits:Number(n)%1===0?0:2}).format(Number(n))}catch(e){return n+' '+(c||'')}}
+function showError(e){status.innerHTML='<strong>Could not load this prompt.</strong><div style="margin-top:8px">'+esc(e)+'</div><div style="margin-top:15px"><a class="btn" href="index.html">Back to store</a></div>'}
+async function load(){
+ var id=new URLSearchParams(location.search).get('id');
+ if(!id || !/^\d+$/.test(id)){showError('A valid prompt ID is missing.');return}
+ try{
+  var u=URL+'/rest/v1/products?select=id,name,category,description,price,currency,image_url,video_url,active&id=eq.'+encodeURIComponent(id)+'&active=eq.true';
+  var r=await fetch(u,{headers:{apikey:KEY,Accept:'application/json'},cache:'no-store'});
+  var t=await r.text(); if(!r.ok) throw new Error('Database returned HTTP '+r.status+(t?': '+t.slice(0,250):''));
+  var rows=JSON.parse(t); if(!rows.length) throw new Error('This prompt was not found.');
+  var p=rows[0], c=cats[p.category]||{label:p.category||'Other',icon:'📦'};
+  status.hidden=true;
+  content.hidden=false;
+  var media='';
+  if(p.image_url) media += '<img class="product-image" src="'+esc(p.image_url)+'" alt="'+esc(p.name)+'">';
+  if(p.video_url) media += '<video class="product-video" src="'+esc(p.video_url)+'" controls preload="metadata"></video>';
+  if(!media) media='<div class="icon">'+c.icon+'</div>';
+  content.innerHTML='<div class="box">'+media+'<div class="badge">'+esc(c.label)+'</div><h1 class="title">'+esc(p.name)+'</h1><p class="desc">'+esc(p.description||'')+'</p><div class="price">'+esc(money(p.price,p.currency))+'</div><div class="actions"><button class="btn" id="buy">Get this prompt</button><a class="btn" href="account.html">Account</a></div></div>';
+  document.getElementById('buy').onclick=function(){location.href='account.html?prompt='+encodeURIComponent(p.id)};
+ }catch(e){console.error(e);showError(e.message||String(e))}
+}
+load();
 })();
 </script>
 </body>

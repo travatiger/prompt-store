@@ -18,7 +18,7 @@ button:disabled{opacity:.6;cursor:wait}
 .blue{background:#2563eb;color:#fff}.red{background:#dc2626;color:#fff}.green{background:#16a34a;color:#fff}.gray{background:#e5e7eb}
 .login{max-width:420px;margin:70px auto}
 .login input,.form input,.form textarea,.form select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:9px;margin:7px 0 12px;font-size:15px;font-family:inherit}
-.form textarea{min-height:90px;resize:vertical}
+.form textarea{min-height:90px;resize:vertical}.media-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.media-box{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fafafa}.media-box input[type=file]{width:100%;margin:7px 0}.media-preview{margin-top:8px;max-height:160px;overflow:hidden;border-radius:9px;background:#111}.media-preview img,.media-preview video{display:block;width:100%;max-height:160px;object-fit:contain}.small{font-size:12px;color:#6b7280}@media(max-width:700px){.media-grid{grid-template-columns:1fr}}
 .form label.check{display:flex;align-items:center;gap:8px;margin:4px 0 14px}.form label.check input{width:auto;margin:0}
 .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
 .tab{background:#e5e7eb}.tab.active{background:#2563eb;color:#fff}
@@ -117,11 +117,29 @@ button:disabled{opacity:.6;cursor:wait}
 <h2 id="formTitle">Add Product</h2>
 <form id="pf">
 <input id="pid" type="hidden">
+<input id="pimageUrl" type="hidden">
+<input id="pvideoUrl" type="hidden">
 <input id="pn" placeholder="Product name" maxlength="120" required>
 <select id="pcat" aria-label="Category"></select>
 <input id="pp" type="number" step="0.01" min="0" placeholder="Price" required>
 <input id="pc" value="USD" maxlength="3" placeholder="Currency (3 letters, e.g. USD)" pattern="[A-Za-z]{3}" required>
 <textarea id="pd" placeholder="Public description (shown to everyone)"></textarea>
+<div class="media-grid">
+  <div class="media-box">
+    <b>Product image</b>
+    <div class="small">JPG, PNG, WEBP, GIF — up to 5 MB</div>
+    <input id="pimage" type="file" accept="image/*">
+    <label class="check"><input id="removeImage" type="checkbox"> Remove current image</label>
+    <div id="imagePreview" class="media-preview hidden"></div>
+  </div>
+  <div class="media-box">
+    <b>Product video</b>
+    <div class="small">MP4, WebM, MOV — up to 50 MB</div>
+    <input id="pvideo" type="file" accept="video/*">
+    <label class="check"><input id="removeVideo" type="checkbox"> Remove current video</label>
+    <div id="videoPreview" class="media-preview hidden"></div>
+  </div>
+</div>
 <textarea id="pr" placeholder="The prompt (only paying customers can see this)" required></textarea>
 <label class="check"><input id="pa" type="checkbox" checked> Active (visible in the store)</label>
 <button class="blue" id="psave">Save product</button>
@@ -325,10 +343,56 @@ button:disabled{opacity:.6;cursor:wait}
     $('pid').value = '';
     $('pc').value = 'USD';
     $('pa').checked = true;
+    $('pimage').value = '';
+    $('pvideo').value = '';
+    $('pimageUrl').value = '';
+    $('pvideoUrl').value = '';
+    $('removeImage').checked = false;
+    $('removeVideo').checked = false;
+    $('imagePreview').innerHTML = ''; $('imagePreview').classList.add('hidden');
+    $('videoPreview').innerHTML = ''; $('videoPreview').classList.add('hidden');
     $('formTitle').textContent = 'Add Product';
     $('pcancel').hidden = true;
   }
   $('pcancel').addEventListener('click', function () { resetProductForm(); $('pm').textContent = ''; });
+
+  function mediaUrlPreview(type, url) {
+    if (!url) return;
+    var box = type === 'image' ? $('imagePreview') : $('videoPreview');
+    box.innerHTML = type === 'image'
+      ? '<img src="' + esc(url) + '" alt="Current product image">'
+      : '<video src="' + esc(url) + '" controls preload="metadata"></video>';
+    box.classList.remove('hidden');
+  }
+
+  function filePreview(inputId, type) {
+    var input = $(inputId);
+    var file = input.files && input.files[0];
+    if (!file) return;
+    var box = type === 'image' ? $('imagePreview') : $('videoPreview');
+    var url = URL.createObjectURL(file);
+    box.innerHTML = type === 'image'
+      ? '<img src="' + esc(url) + '" alt="New product image preview">'
+      : '<video src="' + esc(url) + '" controls preload="metadata"></video>';
+    box.classList.remove('hidden');
+  }
+
+  $('pimage').addEventListener('change', function () { filePreview('pimage', 'image'); });
+  $('pvideo').addEventListener('change', function () { filePreview('pvideo', 'video'); });
+
+  async function uploadMedia(file, kind) {
+    if (!file) return null;
+    var max = kind === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
+    if (file.size > max) throw new Error((kind === 'image' ? 'Image' : 'Video') + ' is too large.');
+    var ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
+    var rid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2));
+    var path = 'products/' + rid + '-' + kind + '.' + ext;
+    var up = await db.storage.from('product-media').upload(path, file, {
+      cacheControl: '3600', upsert: false, contentType: file.type || undefined
+    });
+    if (up.error) throw new Error('Could not upload ' + kind + ': ' + up.error.message);
+    return db.storage.from('product-media').getPublicUrl(path).data.publicUrl;
+  }
 
   async function loadProducts() {
     var r = await db.from('products').select('id,name,category,price,currency,active').order('id', { ascending: false });
@@ -352,7 +416,7 @@ button:disabled{opacity:.6;cursor:wait}
       var id = Number(ed.dataset.edit);
       clearError();
       var results = await Promise.all([
-        db.from('products').select('id,name,category,price,currency,description,active').eq('id', id).maybeSingle(),
+        db.from('products').select('id,name,category,price,currency,description,image_url,video_url,active').eq('id', id).maybeSingle(),
         db.rpc('get_my_prompt', { p_product_id: id })
       ]);
       var p = results[0], pr = results[1];
@@ -364,6 +428,14 @@ button:disabled{opacity:.6;cursor:wait}
       $('pp').value = p.data.price;
       $('pc').value = p.data.currency;
       $('pd').value = p.data.description || '';
+      $('pimageUrl').value = p.data.image_url || '';
+      $('pvideoUrl').value = p.data.video_url || '';
+      $('removeImage').checked = false; $('removeVideo').checked = false;
+      $('pimage').value = ''; $('pvideo').value = '';
+      $('imagePreview').innerHTML = ''; $('imagePreview').classList.add('hidden');
+      $('videoPreview').innerHTML = ''; $('videoPreview').classList.add('hidden');
+      mediaUrlPreview('image', p.data.image_url);
+      mediaUrlPreview('video', p.data.video_url);
       $('pr').value = pr.data || '';
       $('pa').checked = !!p.data.active;
       $('formTitle').textContent = 'Edit Product #' + p.data.id;
@@ -390,23 +462,39 @@ button:disabled{opacity:.6;cursor:wait}
     btn.disabled = true;
     pm.className = '';
     pm.textContent = 'Saving…';
-    var idVal = $('pid').value;
-    var r = await db.rpc('admin_save_product', {
-      p_id: idVal ? Number(idVal) : null,
-      p_name: $('pn').value.trim(),
-      p_category: $('pcat').value,
-      p_price: Number($('pp').value),
-      p_currency: $('pc').value.trim().toUpperCase(),
-      p_description: $('pd').value.trim(),
-      p_prompt: $('pr').value,
-      p_active: $('pa').checked
-    });
-    btn.disabled = false;
-    if (r.error) { pm.className = 'bad'; pm.textContent = r.error.message; return; }
-    pm.className = 'ok';
-    pm.textContent = 'Saved ✓';
-    resetProductForm();
-    await Promise.all([loadProducts(), refreshStats()]);
+    try {
+      var idVal = $('pid').value;
+      var imageUrl = $('pimageUrl').value || null;
+      var videoUrl = $('pvideoUrl').value || null;
+      if ($('removeImage').checked) imageUrl = null;
+      if ($('removeVideo').checked) videoUrl = null;
+      if ($('pimage').files && $('pimage').files[0]) imageUrl = await uploadMedia($('pimage').files[0], 'image');
+      if ($('pvideo').files && $('pvideo').files[0]) videoUrl = await uploadMedia($('pvideo').files[0], 'video');
+      pm.textContent = 'Saving product…';
+      var r = await db.rpc('admin_save_product', {
+        p_id: idVal ? Number(idVal) : null,
+        p_name: $('pn').value.trim(),
+        p_category: $('pcat').value,
+        p_price: Number($('pp').value),
+        p_currency: $('pc').value.trim().toUpperCase(),
+        p_description: $('pd').value.trim(),
+        p_image_url: imageUrl,
+        p_video_url: videoUrl,
+        p_prompt: $('pr').value,
+        p_active: $('pa').checked
+      });
+      if (r.error) { pm.className = 'bad'; pm.textContent = r.error.message; return; }
+      pm.className = 'ok';
+      pm.textContent = 'Saved ✓';
+      resetProductForm();
+      await Promise.all([loadProducts(), refreshStats()]);
+      return;
+    } catch (e) {
+      pm.className = 'bad';
+      pm.textContent = e && e.message ? e.message : String(e);
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   /* ---------- chats ---------- */

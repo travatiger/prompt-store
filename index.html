@@ -30,7 +30,7 @@ a{text-decoration:none;color:inherit}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .card{background:#fff;border:1px solid #e7e7ed;border-radius:17px;padding:20px;transition:.2s}
 .card:hover{transform:translateY(-3px);box-shadow:0 10px 30px #0000000c}
-.icon{height:105px;border-radius:13px;background:#eeeef4;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:17px}
+.icon{height:105px;border-radius:13px;background:#eeeef4;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:17px;overflow:hidden}.media-icon img{width:100%;height:100%;object-fit:cover}.media-note{font-size:11px;color:#666;margin:-7px 0 9px}
 .badge{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.7px}
 .card h3{font-size:19px;margin:5px 0 8px}.card p{font-size:14px;color:#666;min-height:42px}
 .card-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:17px}
@@ -145,8 +145,12 @@ footer a{text-decoration:underline}
 
   function card(p) {
     var c = CATEGORIES[p.category] || { label: p.category || 'Other', icon: '📦' };
+    var media = p.image_url
+      ? '<div class="icon media-icon"><img src="' + esc(p.image_url) + '" alt="' + esc(p.name) + '"></div>'
+      : '<div class="icon" aria-hidden="true">' + c.icon + '</div>';
     return '<article class="card">' +
-      '<div class="icon" aria-hidden="true">' + c.icon + '</div>' +
+      media +
+      (p.video_url ? '<div class="media-note">🎬 Video available</div>' : '') +
       '<div class="badge">' + esc(c.label) + '</div>' +
       '<h3>' + esc(p.name) + '</h3>' +
       '<p>' + esc(p.description || '') + '</p>' +
@@ -188,7 +192,7 @@ footer a{text-decoration:underline}
     s.textContent = 'Connecting to product database…';
 
     var url = SUPABASE_URL.replace(/\/$/, '') +
-      '/rest/v1/products?select=id,name,category,description,price,currency&active=eq.true&order=id.asc';
+      '/rest/v1/products?select=id,name,category,description,price,currency,image_url,video_url&active=eq.true&order=id.asc';
 
     try {
       var response = await fetch(url, {
