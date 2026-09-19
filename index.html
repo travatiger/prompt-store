@@ -87,7 +87,7 @@ footer a{text-decoration:underline}
 <div class="muted">Ready-to-use prompts for your next project.</div>
 </div>
 
-<div class="notice" id="status" role="status">Loading prompts…</div>
+<div class="notice" id="status" role="status">Connecting to product database…</div>
 <div class="grid" id="grid"></div>
 <div class="notice" id="empty" hidden></div>
 </section>
@@ -103,43 +103,72 @@ footer a{text-decoration:underline}
 
 <footer>© 2026 PromptHub. All rights reserved. · <a href="legal.html">Terms &amp; Privacy</a></footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/common.js"></script>
 <script>
 (function () {
   'use strict';
-  var PH = window.PH;
-  var $ = function (id) { return document.getElementById(id); };
+
+  // Homepage is intentionally self-contained so it still works if common.js
+  // or the Supabase CDN is unavailable.
+  var SUPABASE_URL = 'https://bwtblyvnsiguhopmxggi.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_BKBleSWgGlggg-MPaBBBcg_zTObBTW8';
   var products = [];
   var currentCategory = 'all';
 
+  var CATEGORIES = {
+    image: { label: 'AI Images', icon: '🖼️' },
+    video: { label: 'AI Video', icon: '🎬' },
+    youtube: { label: 'YouTube', icon: '▶️' },
+    business: { label: 'Business', icon: '💼' }
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(x) {
+    return String(x == null ? '' : x).replace(/[&<>"']/g, function (m) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+    });
+  }
+
+  function money(amount, currency) {
+    var n = Number(amount);
+    if (!isFinite(n)) return '-';
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency || 'USD',
+        minimumFractionDigits: n % 1 === 0 ? 0 : 2
+      }).format(n);
+    } catch (e) {
+      return n + ' ' + (currency || '');
+    }
+  }
+
   function card(p) {
-    var c = PH.CATEGORIES[p.category] || { label: p.category, icon: '📦' };
+    var c = CATEGORIES[p.category] || { label: p.category || 'Other', icon: '📦' };
     return '<article class="card">' +
       '<div class="icon" aria-hidden="true">' + c.icon + '</div>' +
-      '<div class="badge">' + PH.esc(c.label) + '</div>' +
-      '<h3>' + PH.esc(p.name) + '</h3>' +
-      '<p>' + PH.esc(p.description) + '</p>' +
-      '<div class="card-bottom"><span class="price">' + PH.esc(PH.money(p.price, p.currency)) + '</span>' +
+      '<div class="badge">' + esc(c.label) + '</div>' +
+      '<h3>' + esc(p.name) + '</h3>' +
+      '<p>' + esc(p.description || '') + '</p>' +
+      '<div class="card-bottom"><span class="price">' + esc(money(p.price, p.currency)) + '</span>' +
       '<a class="btn" href="product.html?id=' + Number(p.id) + '">View Prompt</a></div>' +
       '</article>';
   }
 
-  // Search looks only at name + description (not price/badge text).
   function render() {
     var q = $('searchInput').value.toLowerCase().trim();
     var list = products.filter(function (p) {
       var okCat = currentCategory === 'all' || p.category === currentCategory;
-      var okQ = !q || (p.name + ' ' + p.description).toLowerCase().indexOf(q) !== -1;
+      var okQ = !q || ((p.name || '') + ' ' + (p.description || '')).toLowerCase().indexOf(q) !== -1;
       return okCat && okQ;
     });
+
     $('grid').innerHTML = list.map(card).join('');
-    var empty = $('empty');
     if (list.length) {
-      empty.hidden = true;
+      $('empty').hidden = true;
     } else {
-      empty.hidden = false;
-      empty.textContent = products.length
+      $('empty').hidden = false;
+      $('empty').textContent = products.length
         ? 'No prompts match your search. Try another word or category.'
         : 'No prompts are available yet. Please check back soon.';
     }
@@ -149,80 +178,45 @@ footer a{text-decoration:underline}
     var s = $('status');
     s.hidden = false;
     s.innerHTML = '<div>Could not load prompts.</div><div class="muted" style="margin-top:6px">' +
-      PH.esc(message) + '</div><button class="btn" type="button" id="retry">Try again</button>';
+      esc(message || 'Unknown database error.') + '</div><button class="btn" type="button" id="retry">Try again</button>';
     $('retry').onclick = load;
   }
 
-  function timeout(ms) {
-    return new Promise(function (_, reject) {
-      setTimeout(function () { reject(new Error('Supabase request timed out after ' + (ms / 1000) + ' seconds.')); }, ms);
-    });
-  }
+  async function load() {
+    var s = $('status');
+    s.hidden = false;
+    s.textContent = 'Connecting to product database…';
 
-  async function loadViaRest() {
-    var base = PH.CONFIG.supabaseUrl.replace(/\/$/, '');
-    var url = base + '/rest/v1/products?select=id,name,category,description,price,currency&active=eq.true&order=id.asc';
-    var response = await Promise.race([
-      fetch(url, {
+    var url = SUPABASE_URL.replace(/\/$/, '') +
+      '/rest/v1/products?select=id,name,category,description,price,currency&active=eq.true&order=id.asc';
+
+    try {
+      var response = await fetch(url, {
         method: 'GET',
         headers: {
-          // New Supabase publishable keys are API keys, not JWTs.
-          // Send them through `apikey` only; do not put them in Bearer.
-          apikey: PH.CONFIG.supabaseKey,
-          Accept: 'application/json'
+          'apikey': SUPABASE_KEY,
+          'Accept': 'application/json'
         },
         cache: 'no-store'
-      }),
-      timeout(10000)
-    ]);
-    if (!response.ok) {
+      });
+
       var body = await response.text();
-      throw new Error('Supabase REST error ' + response.status + (body ? ': ' + body.slice(0, 240) : ''));
-    }
-    return await response.json();
-  }
-
-  async function load() {
-    $('status').hidden = false;
-    $('status').textContent = 'Loading prompts…';
-
-    var lastError = null;
-
-    // First use the Supabase JS client.
-    if (!PH.initError && PH.db) {
-      try {
-        var r = await Promise.race([
-          PH.db.from('products')
-            .select('id,name,category,description,price,currency')
-            .eq('active', true)
-            .order('id', { ascending: true }),
-          timeout(10000)
-        ]);
-        if (!r.error) {
-          products = r.data || [];
-          $('status').hidden = true;
-          render();
-          return;
-        }
-        lastError = new Error(r.error.message);
-      } catch (e) {
-        lastError = e;
+      if (!response.ok) {
+        throw new Error('Supabase returned HTTP ' + response.status + (body ? ': ' + body.slice(0, 300) : ''));
       }
-    } else if (PH.initError) {
-      lastError = PH.initError;
-    }
 
-    // Fallback to Supabase REST API. This also works if the JS SDK/CDN has a problem.
-    try {
-      products = await loadViaRest();
-      $('status').hidden = true;
+      var data = JSON.parse(body);
+      if (!Array.isArray(data)) {
+        throw new Error('Supabase returned an unexpected response.');
+      }
+
+      products = data;
+      s.hidden = true;
       render();
-      return;
     } catch (e) {
-      lastError = e;
+      fail(e && e.message ? e.message : String(e));
+      console.error('PromptHub load error:', e);
     }
-
-    fail(lastError ? lastError.message : 'Unknown Supabase connection error.');
   }
 
   $('cats').addEventListener('click', function (e) {
@@ -236,6 +230,7 @@ footer a{text-decoration:underline}
     });
     render();
   });
+
   $('searchInput').addEventListener('input', render);
   $('searchBtn').addEventListener('click', render);
 
