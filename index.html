@@ -27,7 +27,7 @@ a{text-decoration:none;color:inherit}
 .cats{display:flex;gap:10px;overflow:auto;padding-bottom:5px}
 .cat{white-space:nowrap;background:#fff;border:1px solid #e7e7ed;padding:10px 15px;border-radius:99px;font-size:14px;cursor:pointer;font-family:inherit;color:inherit}
 .cat.active{background:#17171c;color:#fff}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.prompt-list{margin-top:18px}.list-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:28px 0 14px}.list-title h3{font-size:22px}.free-title{color:#177245}.paid-title{color:#17171c}
 .card{background:#fff;border:1px solid #e7e7ed;border-radius:17px;padding:20px;transition:.2s}
 .card:hover{transform:translateY(-3px);box-shadow:0 10px 30px #0000000c}
 .icon{min-height:105px;border-radius:13px;background:#eeeef4;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:17px;overflow:hidden}.media-icon{display:block;height:auto}.media-icon img,.media-icon video{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}.media-icon video{background:#111}.media-note{font-size:11px;color:#666;margin:-7px 0 9px}
@@ -88,7 +88,25 @@ footer a{text-decoration:underline}
 </div>
 
 <div class="notice" id="status" role="status">Connecting to product database…</div>
-<div class="grid" id="grid"></div>
+
+<div id="freeSection" class="prompt-list" hidden>
+  <div class="list-title">
+    <h3 class="free-title">🆓 Free Prompts</h3>
+    <div class="muted">Completely free to use.</div>
+  </div>
+  <div class="grid" id="freeGrid"></div>
+  <div class="notice" id="freeEmpty" hidden>No free prompts match your search.</div>
+</div>
+
+<div id="paidSection" class="prompt-list" hidden>
+  <div class="list-title">
+    <h3 class="paid-title">💎 Paid Prompts</h3>
+    <div class="muted">Premium ready-to-use prompts.</div>
+  </div>
+  <div class="grid" id="paidGrid"></div>
+  <div class="notice" id="paidEmpty" hidden>No paid prompts match your search.</div>
+</div>
+
 <div class="notice" id="empty" hidden></div>
 </section>
 
@@ -167,20 +185,37 @@ footer a{text-decoration:underline}
 
   function render() {
     var q = $('searchInput').value.toLowerCase().trim();
+
     var list = products.filter(function (p) {
       var okCat = currentCategory === 'all' || p.category === currentCategory;
       var okQ = !q || ((p.name || '') + ' ' + (p.description || '')).toLowerCase().indexOf(q) !== -1;
       return okCat && okQ;
     });
 
-    $('grid').innerHTML = list.map(card).join('');
-    if (list.length) {
-      $('empty').hidden = true;
-    } else {
+    var free = list.filter(function (p) {
+      return Number(p.price) === 0;
+    });
+
+    var paid = list.filter(function (p) {
+      return Number(p.price) > 0;
+    });
+
+    $('freeGrid').innerHTML = free.map(card).join('');
+    $('paidGrid').innerHTML = paid.map(card).join('');
+
+    $('freeSection').hidden = free.length === 0;
+    $('paidSection').hidden = paid.length === 0;
+
+    $('freeEmpty').hidden = true;
+    $('paidEmpty').hidden = true;
+
+    if (!list.length) {
       $('empty').hidden = false;
       $('empty').textContent = products.length
         ? 'No prompts match your search. Try another word or category.'
         : 'No prompts are available yet. Please check back soon.';
+    } else {
+      $('empty').hidden = true;
     }
   }
 
