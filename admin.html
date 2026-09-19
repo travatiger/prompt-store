@@ -1,48 +1,487 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PromptHub Admin</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#f5f7fb;color:#111827}.top{background:#111827;color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center}.wrap{max-width:1100px;margin:auto;padding:18px}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000d}button{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}.blue{background:#2563eb;color:white}.red{background:#dc2626;color:white}.green{background:#16a34a;color:white}.gray{background:#e5e7eb}.login{max-width:420px;margin:70px auto}.login input,.form input,.form textarea{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:9px;margin:7px 0 12px}.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}.tab.active{background:#2563eb;color:#fff}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{background:#fff;padding:16px;border-radius:14px}.num{font-size:28px;font-weight:800;margin-top:6px}.hidden{display:none}.table{overflow:auto}.table table{width:100%;border-collapse:collapse;min-width:650px}.table th,.table td{text-align:left;padding:11px;border-bottom:1px solid #eee}.chat{display:grid;grid-template-columns:280px 1fr;gap:12px;min-height:520px}.list{background:#fff;border-radius:14px;overflow:auto}.person{width:100%;text-align:left;background:#fff;border-bottom:1px solid #eee;border-radius:0}.person.active{background:#eef2ff}.messages{background:#f8fafc;border-radius:14px;padding:14px;overflow:auto;min-height:430px}.msg{max-width:75%;padding:9px 12px;border-radius:12px;margin:8px 0}.mine{margin-left:auto;background:#2563eb;color:#fff}.theirs{background:#e5e7eb}.compose{display:flex;gap:7px;margin-top:8px}.compose input{flex:1;padding:12px;border:1px solid #ddd;border-radius:9px}.error{background:#fee2e2;color:#991b1b;padding:10px;border-radius:9px;margin-top:10px}@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.chat{grid-template-columns:1fr}.list{max-height:180px}}
-</style></head><body><div id="login" class="login card"><h2>🔐 PromptHub Admin</h2><p>Admin login</p><form id="lf"><input id="email" type="email" placeholder="Email" required><input id="pass" type="password" placeholder="Password" required><button class="blue" style="width:100%">Login</button></form><div id="err"></div>
-<div id="err"></div></div><div id="app" class="hidden"><div class="top"><b>PromptHub Admin</b><button id="out" class="gray">Logout</button></div><div class="wrap"><div class="tabs"><button class="tab active" data-p="dash">📊 Dashboard</button><button class="tab" data-p="customers">👥 Customers</button><button class="tab" data-p="chats">💬 Chats</button><button class="tab" data-p="payments">💳 Payments</button><button class="tab" data-p="products">📦 Products</button></div><section id="dash"><div class="stats"><div class="stat">Customers<div id="sc" class="num">0</div></div><div class="stat">Chats<div id="sh" class="num">0</div></div><div class="stat">Pending Payments<div id="sp" class="num">0</div></div><div class="stat">Products<div id="sx" class="num">0</div></div></div><div class="card"><b>Logged in as</b><div id="who"></div></div></section><section id="customers" class="hidden"><div class="card"><h2>Customers</h2><div class="table"><table><thead><tr><th>Name</th><th>User ID</th><th>Joined</th></tr></thead><tbody id="cb"></tbody></table></div></div></section><section id="chats" class="hidden"><div class="chat"><div id="people" class="list"></div><div><div id="mh" class="card">Select a customer</div><div id="msgs" class="messages">No conversation selected.</div><form id="mf" class="compose hidden"><input id="mi" placeholder="Write a message..." required><button class="blue">Send</button></form></div></div></section><section id="payments" class="hidden"><div class="card"><h2>Payment Verification</h2><div class="table"><table><thead><tr><th>ID</th><th>Customer</th><th>Order</th><th>Status</th><th>Action</th></tr></thead><tbody id="pb"></tbody></table></div></div></section><section id="products" class="hidden"><div class="card form"><h2>Add Product</h2><form id="pf"><input id="pn" placeholder="Product name" required><input id="pp" type="number" step="0.01" placeholder="Price" required><input id="pc" value="USD" placeholder="Currency"><textarea id="pd" placeholder="Description"></textarea><textarea id="pr" placeholder="Prompt" required></textarea><button class="blue">Add Product</button></form><div id="pm"></div></div><div class="card"><h2>Products</h2><div class="table"><table><thead><tr><th>Name</th><th>Price</th><th>Active</th><th>Action</th></tr></thead><tbody id="xb"></tbody></table></div></div></section></div></div><script>
-const URL='https://bwtblyvnsiguhopmxggi.supabase.co';
-const KEY='sb_publishable_BKBleSWgGlggg-MPaBBBcg_zTObBTW8';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>PromptHub Admin</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%90%3C/text%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f5f7fb;color:#111827}
+.hidden,[hidden]{display:none!important}
+.top{background:#111827;color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center}
+.wrap{max-width:1100px;margin:auto;padding:18px}
+.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000d}
+button{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px}
+button:disabled{opacity:.6;cursor:wait}
+.blue{background:#2563eb;color:#fff}.red{background:#dc2626;color:#fff}.green{background:#16a34a;color:#fff}.gray{background:#e5e7eb}
+.login{max-width:420px;margin:70px auto}
+.login input,.form input,.form textarea,.form select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:9px;margin:7px 0 12px;font-size:15px;font-family:inherit}
+.form textarea{min-height:90px;resize:vertical}
+.form label.check{display:flex;align-items:center;gap:8px;margin:4px 0 14px}.form label.check input{width:auto;margin:0}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.tab{background:#e5e7eb}.tab.active{background:#2563eb;color:#fff}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:#fff;padding:16px;border-radius:14px}
+.num{font-size:28px;font-weight:800;margin-top:6px}
+.table{overflow:auto}
+.table table{width:100%;border-collapse:collapse;min-width:650px}
+.table th,.table td{text-align:left;padding:11px;border-bottom:1px solid #eee;vertical-align:top;font-size:14px}
+.table td.wrapcell{max-width:220px;word-break:break-word}
+.chat{display:grid;grid-template-columns:280px 1fr;gap:12px;min-height:520px}
+.list{background:#fff;border-radius:14px;overflow:auto;max-height:600px}
+.person{width:100%;text-align:left;background:#fff;border-bottom:1px solid #eee;border-radius:0}
+.person.active{background:#eef2ff}
+.messages{background:#f8fafc;border-radius:14px;padding:14px;overflow:auto;height:430px}
+.msg{max-width:75%;padding:9px 12px;border-radius:12px;margin:8px 0;white-space:pre-wrap;word-break:break-word}
+.mine{margin-left:auto;background:#2563eb;color:#fff}.theirs{background:#e5e7eb}
+.compose{display:flex;gap:7px;margin-top:8px}.compose input{flex:1;padding:12px;border:1px solid #ddd;border-radius:9px}
+.banner{position:sticky;top:0;z-index:20;margin:0;padding:14px;background:#fee2e2;color:#991b1b;border-bottom:1px solid #fecaca}
+.banner pre{white-space:pre-wrap;word-break:break-word;margin:8px 0;font:12px/1.5 monospace}
+.ok{color:#166534}.bad{color:#991b1b}
+@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.chat{grid-template-columns:1fr}.list{max-height:180px}}
+</style>
+</head>
+<body>
+<!-- Errors live OUTSIDE the login box so they stay visible after login too. -->
+<div id="err" role="alert"></div>
 
-function showFatalError(title,detail){
- const el=document.getElementById('err');
- if(el) el.innerHTML='<div style="margin-top:14px;padding:14px;border-radius:10px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca"><b>❌ '+title+'</b><pre style="white-space:pre-wrap;word-break:break-word;margin:8px 0 0;font:12px/1.5 monospace">'+String(detail||'Unknown error').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</pre></div>';
-}
-window.onerror=function(message,source,line,col,error){showFatalError('JavaScript Error',(message||'Unknown error')+'\n\nLine: '+line+', Column: '+col);};
-window.onunhandledrejection=function(e){showFatalError('Promise Error',e.reason?.message||String(e.reason||'Unknown rejection'));};
+<div id="boot" class="wrap">Loading…</div>
 
-let db;
-try{
- if(!window.supabase) throw new Error('Supabase library did not load. The CDN/network connection failed.');
- db=window.supabase.createClient(URL,KEY);
-}catch(e){showFatalError('Startup Error',e.message||String(e));throw e;}
+<div id="login" class="login card hidden">
+<h2>🔐 PromptHub Admin</h2>
+<p>Admin login</p>
+<form id="lf" class="form">
+<input id="email" type="email" placeholder="Email" autocomplete="username" required>
+<input id="pass" type="password" placeholder="Password" autocomplete="current-password" required>
+<button class="blue" style="width:100%">Login</button>
+</form>
+<div id="loginMsg" class="bad" style="margin-top:10px"></div>
+</div>
 
-let me=null,conv=null,timer=null;const $=x=>document.getElementById(x);const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-async function admin(){
- const gu=await db.auth.getUser();
- if(gu.error){showFatalError('Auth Error',gu.error.message);return false;}
- const user=gu.data?.user;
- if(!user)return false;
- const pr=await db.from('profiles').select('role').eq('id',user.id).maybeSingle();
- if(pr.error){showFatalError('Profile Error',pr.error.message);return false;}
- if(!pr.data||pr.data.role!=='admin'){showFatalError('Access Error','This account is not marked as admin.');return false;}
- me=user;$('who').textContent=user.email;return true;
-}
-async function start(){
- try{
-  if(!(await admin()))return;
-  $('login').classList.add('hidden');$('app').classList.remove('hidden');
-  await loadAll();timer=setInterval(()=>{if(conv)messages()},3000);
- }catch(e){showFatalError('Admin Error',e.message||String(e));}
-}
-$('lf').onsubmit=async e=>{e.preventDefault();$('err').innerHTML='';try{const r=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});if(r.error){showFatalError('Login Error',r.error.message);return}await start();}catch(err){showFatalError('Login Error',err.message||String(err));}};
-$('out').onclick=async()=>{await db.auth.signOut();location.reload()}
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');['dash','customers','chats','payments','products'].forEach(x=>$(x).classList.toggle('hidden',x!==b.dataset.p));if(b.dataset.p==='chats')chatPeople()});
-async function loadAll(){const [c,h,p,x]=await Promise.all([db.from('profiles').select('id',{count:'exact',head:true}).neq('role','admin'),db.from('conversations').select('id',{count:'exact',head:true}),db.from('payment_submissions').select('id',{count:'exact',head:true}).eq('status','pending'),db.from('products').select('id',{count:'exact',head:true})]);$('sc').textContent=c.count||0;$('sh').textContent=h.count||0;$('sp').textContent=p.count||0;$('sx').textContent=x.count||0;customers();payments();products();}
-async function customers(){const {data,error}=await db.from('profiles').select('id,full_name,created_at,role').neq('role','admin').order('created_at',{ascending:false});$('cb').innerHTML=error?'<tr><td colspan=3>'+esc(error.message)+'</td></tr>':(data||[]).map(x=>'<tr><td>'+esc(x.full_name||'Customer')+'</td><td>'+esc(x.id)+'</td><td>'+new Date(x.created_at).toLocaleString()+'</td></tr>').join('')||'<tr><td colspan=3>No customers yet</td></tr>'}
-async function chatPeople(){const {data,error}=await db.from('conversations').select('id,customer_id,profiles(full_name)').order('created_at',{ascending:false});$('people').innerHTML=error?esc(error.message):(data||[]).map(x=>'<button class="person '+(conv===x.id?'active':'')+'" onclick="pick('+x.id+')"><b>'+esc(x.profiles?.full_name||'Customer')+'</b><br><small>Conversation #'+x.id+'</small></button>').join('')||'<div style="padding:20px">No chats yet.</div>'}
-window.pick=async id=>{conv=id;$('mf').classList.remove('hidden');await chatPeople();await messages()};async function messages(){if(!conv)return;const {data,error}=await db.from('messages').select('sender_id,message,created_at').eq('conversation_id',conv).order('created_at',{ascending:true});$('mh').textContent='Private customer chat';$('msgs').innerHTML=error?'<div class="error">'+esc(error.message)+'</div>':(data||[]).map(x=>'<div class="msg '+(x.sender_id===me.id?'mine':'theirs')+'">'+esc(x.message)+'</div>').join('')||'No messages yet';$('msgs').scrollTop=$('msgs').scrollHeight}
-$('mf').onsubmit=async e=>{e.preventDefault();const m=$('mi').value.trim();if(!m||!conv)return;const {error}=await db.from('messages').insert({conversation_id:conv,sender_id:me.id,message:m});if(error)alert(error.message);else{$('mi').value='';messages()}};
-async function payments(){const {data,error}=await db.from('payment_submissions').select('id,customer_id,order_id,status').order('created_at',{ascending:false});$('pb').innerHTML=error?'<tr><td colspan=5>'+esc(error.message)+'</td></tr>':(data||[]).map(x=>'<tr><td>#'+x.id+'</td><td>'+esc(x.customer_id)+'</td><td>#'+x.order_id+'</td><td>'+esc(x.status)+'</td><td>'+(x.status==='pending'?'<button class="green" onclick="pay('+x.id+',\'approved\')">Approve</button> <button class="red" onclick="pay('+x.id+',\'rejected\')">Reject</button>':'-')+'</td></tr>').join('')||'<tr><td colspan=5>No payments yet</td></tr>'}window.pay=async(id,status)=>{const {error}=await db.from('payment_submissions').update({status}).eq('id',id);if(error)alert(error.message);payments();loadAll()};
-start();
-</script></body></html>
+<div id="app" class="hidden">
+<div class="top"><b>PromptHub Admin</b><button id="out" class="gray" type="button">Logout</button></div>
+<div class="wrap">
+<div class="tabs" id="tabs">
+<button class="tab active" type="button" data-p="dash">📊 Dashboard</button>
+<button class="tab" type="button" data-p="customers">👥 Customers</button>
+<button class="tab" type="button" data-p="chats">💬 Chats</button>
+<button class="tab" type="button" data-p="payments">💳 Payments</button>
+<button class="tab" type="button" data-p="products">📦 Products</button>
+</div>
+
+<section id="dash">
+<div class="stats">
+<div class="stat">Customers<div id="sc" class="num">0</div></div>
+<div class="stat">Chats<div id="sh" class="num">0</div></div>
+<div class="stat">Pending Payments<div id="sp" class="num">0</div></div>
+<div class="stat">Products<div id="sx" class="num">0</div></div>
+</div>
+<div class="card"><b>Logged in as</b><div id="who"></div></div>
+</section>
+
+<section id="customers" class="hidden">
+<div class="card"><h2>Customers</h2>
+<div class="table"><table>
+<thead><tr><th>Name</th><th>User ID</th><th>Joined</th></tr></thead>
+<tbody id="cb"></tbody>
+</table></div></div>
+</section>
+
+<section id="chats" class="hidden">
+<div class="chat">
+<div id="people" class="list"></div>
+<div>
+<div id="mh" class="card">Select a customer</div>
+<div id="msgs" class="messages">No conversation selected.</div>
+<form id="mf" class="compose hidden">
+<input id="mi" maxlength="2000" placeholder="Write a message..." required>
+<button class="blue">Send</button>
+</form>
+</div>
+</div>
+</section>
+
+<section id="payments" class="hidden">
+<div class="card"><h2>Payment Verification</h2>
+<p style="font-size:13px;color:#555;margin-top:0">Compare the amount and transaction ID with your bank / wallet before approving. Approving unlocks the prompt for the customer.</p>
+<div class="table"><table style="min-width:980px">
+<thead><tr><th>ID</th><th>Date</th><th>Customer</th><th>Product</th><th>Amount</th><th>Method</th><th>Transaction ID</th><th>Note</th><th>Status</th><th>Action</th></tr></thead>
+<tbody id="pb"></tbody>
+</table></div></div>
+</section>
+
+<section id="products" class="hidden">
+<div class="card form">
+<h2 id="formTitle">Add Product</h2>
+<form id="pf">
+<input id="pid" type="hidden">
+<input id="pn" placeholder="Product name" maxlength="120" required>
+<select id="pcat" aria-label="Category"></select>
+<input id="pp" type="number" step="0.01" min="0" placeholder="Price" required>
+<input id="pc" value="USD" maxlength="3" placeholder="Currency (3 letters, e.g. USD)" pattern="[A-Za-z]{3}" required>
+<textarea id="pd" placeholder="Public description (shown to everyone)"></textarea>
+<textarea id="pr" placeholder="The prompt (only paying customers can see this)" required></textarea>
+<label class="check"><input id="pa" type="checkbox" checked> Active (visible in the store)</label>
+<button class="blue" id="psave">Save product</button>
+<button class="gray" id="pcancel" type="button" hidden>Cancel edit</button>
+</form>
+<div id="pm" style="margin-top:10px"></div>
+</div>
+<div class="card"><h2>Products</h2>
+<div class="table"><table>
+<thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Active</th><th>Action</th></tr></thead>
+<tbody id="xb"></tbody>
+</table></div></div>
+</section>
+</div>
+</div>
+
+<!-- NOTE: pin a specific supabase-js version (and add an integrity hash) once you have picked one, see README. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/common.js"></script>
+<script>
+(function () {
+  'use strict';
+  var PH = window.PH;
+  var db = PH.db;
+  var esc = PH.esc;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var me = null;
+  var conv = null;
+  var convName = '';
+  var msgKey = '';
+  var currentPane = 'dash';
+  var pollTimer = null;
+
+  /* ---------- error display (outside the login box, so it is always visible) ---------- */
+
+  function clearError() { $('err').innerHTML = ''; }
+  function showError(title, detail) {
+    $('err').innerHTML = '<div class="banner"><b>❌ ' + esc(title) + '</b><pre>' +
+      esc(detail || 'Unknown error') + '</pre><button type="button" class="gray" id="errx">Dismiss</button></div>';
+    $('errx').onclick = clearError;
+  }
+  window.addEventListener('error', function (e) {
+    showError('JavaScript error', (e.message || 'Unknown error') + (e.lineno ? '\n\nLine ' + e.lineno : ''));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e.reason;
+    showError('Unexpected error', (r && r.message) || String(r || 'Unknown rejection'));
+  });
+
+  function showLogin(message) {
+    $('boot').classList.add('hidden');
+    $('app').classList.add('hidden');
+    $('login').classList.remove('hidden');
+    $('loginMsg').textContent = message || '';
+  }
+  function showApp() {
+    $('boot').classList.add('hidden');
+    $('login').classList.add('hidden');
+    $('app').classList.remove('hidden');
+  }
+
+  /* ---------- session / admin check ---------- */
+  // NOTE: this check is only for UX. Real protection is Row Level Security + the
+  // admin-only SQL functions in supabase/schema.sql.
+
+  async function isAdmin(user) {
+    var pr = await db.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    if (pr.error) { showError('Profile error', pr.error.message); return false; }
+    return !!(pr.data && pr.data.role === 'admin');
+  }
+
+  async function start() {
+    // getSession() (unlike getUser()) does not raise an error when nobody is logged in.
+    var s = await db.auth.getSession();
+    var session = s.data && s.data.session;
+    if (!session) { showLogin(); return; }
+    if (!(await isAdmin(session.user))) {
+      await db.auth.signOut();
+      showLogin('This account is not an admin.');
+      return;
+    }
+    me = session.user;
+    $('who').textContent = me.email || me.id;
+    showApp();
+    startPoll();
+    await loadAll();
+  }
+
+  $('lf').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearError();
+    $('loginMsg').textContent = 'Signing in…';
+    var r = await db.auth.signInWithPassword({ email: $('email').value.trim(), password: $('pass').value });
+    if (r.error) { $('loginMsg').textContent = r.error.message; return; }
+    $('loginMsg').textContent = '';
+    await start();
+  });
+
+  $('out').addEventListener('click', async function () {
+    await db.auth.signOut();
+    location.reload();
+  });
+
+  /* ---------- tabs ---------- */
+
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-p]');
+    if (!b) return;
+    currentPane = b.dataset.p;
+    clearError();
+    document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('active', x === b); });
+    ['dash', 'customers', 'chats', 'payments', 'products'].forEach(function (id) {
+      $(id).classList.toggle('hidden', id !== currentPane);
+    });
+    if (currentPane === 'chats') chatPeople();
+  });
+
+  /* ---------- data loading ---------- */
+
+  async function refreshStats() {
+    var res = await Promise.all([
+      db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
+      db.from('conversations').select('id', { count: 'exact', head: true }),
+      db.from('payment_submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      db.from('products').select('id', { count: 'exact', head: true })
+    ]);
+    var ids = ['sc', 'sh', 'sp', 'sx'];
+    res.forEach(function (r, i) {
+      if (r.error) showError('Could not load statistics', r.error.message);
+      $(ids[i]).textContent = r.count || 0;
+    });
+  }
+
+  async function loadAll() {
+    // Each loader handles its own errors, so one failure never blocks the others.
+    await Promise.all([refreshStats(), loadCustomers(), loadPayments(), loadProducts()]);
+  }
+
+  async function loadCustomers() {
+    var r = await db.from('profiles').select('id,full_name,created_at')
+      .eq('role', 'customer').order('created_at', { ascending: false });
+    $('cb').innerHTML = r.error
+      ? '<tr><td colspan="3" class="bad">' + esc(r.error.message) + '</td></tr>'
+      : (r.data || []).map(function (x) {
+          return '<tr><td>' + esc(x.full_name || 'Customer') + '</td><td>' + esc(x.id) + '</td><td>' +
+            esc(new Date(x.created_at).toLocaleString()) + '</td></tr>';
+        }).join('') || '<tr><td colspan="3">No customers yet</td></tr>';
+  }
+
+  /* ---------- payments ---------- */
+
+  function payRow(x) {
+    var o = x.orders || {};
+    var prod = (o.products && o.products.name) || '-';
+    var cust = (x.profiles && x.profiles.full_name) || 'Customer';
+    var id = Number(x.id);
+    var actions = x.status === 'pending'
+      ? '<button class="green" type="button" data-pay="approved" data-id="' + id + '">Approve</button> ' +
+        '<button class="red" type="button" data-pay="rejected" data-id="' + id + '">Reject</button>'
+      : '-';
+    return '<tr><td>#' + id + '</td><td>' + esc(new Date(x.created_at).toLocaleString()) + '</td><td>' + esc(cust) +
+      '</td><td>' + esc(prod) + '</td><td>' + esc(PH.money(o.amount, o.currency)) + '</td><td>' + esc(x.method) +
+      '</td><td class="wrapcell">' + esc(x.transaction_ref) + '</td><td class="wrapcell">' + esc(x.note) +
+      '</td><td>' + esc(x.status) + '</td><td>' + actions + '</td></tr>';
+  }
+
+  async function loadPayments() {
+    var r = await db.from('payment_submissions')
+      .select('id,method,transaction_ref,note,status,created_at,profiles(full_name),orders(amount,currency,products(name))')
+      .order('created_at', { ascending: false });
+    $('pb').innerHTML = r.error
+      ? '<tr><td colspan="10" class="bad">' + esc(r.error.message) + '</td></tr>'
+      : (r.data || []).map(payRow).join('') || '<tr><td colspan="10">No payments yet</td></tr>';
+  }
+
+  $('pb').addEventListener('click', async function (e) {
+    var b = e.target.closest('button[data-pay]');
+    if (!b) return;
+    var id = Number(b.dataset.id);
+    var status = b.dataset.pay;
+    if (!confirm((status === 'approved' ? 'Approve' : 'Reject') + ' payment #' + id + '?')) return;
+    clearError();
+    b.disabled = true;
+    var r = await db.rpc('review_payment', { p_id: id, p_status: status });
+    if (r.error) showError('Payment error', r.error.message);
+    await Promise.all([loadPayments(), refreshStats()]);
+  });
+
+  /* ---------- products ---------- */
+
+  Object.keys(PH.CATEGORIES).forEach(function (k) {
+    var o = document.createElement('option');
+    o.value = k;
+    o.textContent = PH.CATEGORIES[k].label;
+    $('pcat').appendChild(o);
+  });
+
+  function resetProductForm() {
+    $('pf').reset();
+    $('pid').value = '';
+    $('pc').value = 'USD';
+    $('pa').checked = true;
+    $('formTitle').textContent = 'Add Product';
+    $('pcancel').hidden = true;
+  }
+  $('pcancel').addEventListener('click', function () { resetProductForm(); $('pm').textContent = ''; });
+
+  async function loadProducts() {
+    var r = await db.from('products').select('id,name,category,price,currency,active').order('id', { ascending: false });
+    $('xb').innerHTML = r.error
+      ? '<tr><td colspan="5" class="bad">' + esc(r.error.message) + '</td></tr>'
+      : (r.data || []).map(function (x) {
+          var id = Number(x.id);
+          var cat = (PH.CATEGORIES[x.category] || {}).label || x.category;
+          return '<tr><td>' + esc(x.name) + '</td><td>' + esc(cat) + '</td><td>' + esc(PH.money(x.price, x.currency)) +
+            '</td><td>' + (x.active ? '<span class="ok">Yes</span>' : '<span class="bad">No</span>') + '</td><td>' +
+            '<button class="gray" type="button" data-edit="' + id + '">Edit</button> ' +
+            '<button class="' + (x.active ? 'red' : 'green') + '" type="button" data-toggle="' + id + '" data-active="' + (x.active ? '1' : '0') + '">' +
+            (x.active ? 'Deactivate' : 'Activate') + '</button></td></tr>';
+        }).join('') || '<tr><td colspan="5">No products yet</td></tr>';
+  }
+
+  $('xb').addEventListener('click', async function (e) {
+    var ed = e.target.closest('button[data-edit]');
+    var tg = e.target.closest('button[data-toggle]');
+    if (ed) {
+      var id = Number(ed.dataset.edit);
+      clearError();
+      var results = await Promise.all([
+        db.from('products').select('id,name,category,price,currency,description,active').eq('id', id).maybeSingle(),
+        db.rpc('get_my_prompt', { p_product_id: id })
+      ]);
+      var p = results[0], pr = results[1];
+      if (p.error || !p.data) { showError('Could not load product', (p.error && p.error.message) || 'Not found'); return; }
+      if (pr.error) { showError('Could not load prompt', pr.error.message); return; }
+      $('pid').value = p.data.id;
+      $('pn').value = p.data.name;
+      $('pcat').value = p.data.category;
+      $('pp').value = p.data.price;
+      $('pc').value = p.data.currency;
+      $('pd').value = p.data.description || '';
+      $('pr').value = pr.data || '';
+      $('pa').checked = !!p.data.active;
+      $('formTitle').textContent = 'Edit Product #' + p.data.id;
+      $('pcancel').hidden = false;
+      $('pm').textContent = '';
+      $('pf').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (tg) {
+      tg.disabled = true;
+      clearError();
+      var r = await db.rpc('admin_set_product_active', {
+        p_id: Number(tg.dataset.toggle),
+        p_active: tg.dataset.active !== '1'
+      });
+      if (r.error) showError('Could not update product', r.error.message);
+      await Promise.all([loadProducts(), refreshStats()]);
+    }
+  });
+
+  $('pf').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearError();
+    var pm = $('pm');
+    var btn = $('psave');
+    btn.disabled = true;
+    pm.className = '';
+    pm.textContent = 'Saving…';
+    var idVal = $('pid').value;
+    var r = await db.rpc('admin_save_product', {
+      p_id: idVal ? Number(idVal) : null,
+      p_name: $('pn').value.trim(),
+      p_category: $('pcat').value,
+      p_price: Number($('pp').value),
+      p_currency: $('pc').value.trim().toUpperCase(),
+      p_description: $('pd').value.trim(),
+      p_prompt: $('pr').value,
+      p_active: $('pa').checked
+    });
+    btn.disabled = false;
+    if (r.error) { pm.className = 'bad'; pm.textContent = r.error.message; return; }
+    pm.className = 'ok';
+    pm.textContent = 'Saved ✓';
+    resetProductForm();
+    await Promise.all([loadProducts(), refreshStats()]);
+  });
+
+  /* ---------- chats ---------- */
+
+  async function chatPeople() {
+    var r = await db.from('conversations')
+      .select('id,customer_id,created_at,profiles(full_name)')
+      .order('created_at', { ascending: false });
+    $('people').innerHTML = r.error
+      ? '<div style="padding:14px" class="bad">' + esc(r.error.message) + '</div>'
+      : (r.data || []).map(function (x) {
+          var name = (x.profiles && x.profiles.full_name) || 'Customer';
+          return '<button class="person' + (conv === x.id ? ' active' : '') + '" type="button" data-conv="' + Number(x.id) +
+            '" data-name="' + esc(name) + '"><b>' + esc(name) + '</b><br><small>Conversation #' + Number(x.id) + '</small></button>';
+        }).join('') || '<div style="padding:20px">No chats yet.</div>';
+  }
+
+  $('people').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-conv]');
+    if (!b) return;
+    conv = Number(b.dataset.conv);
+    convName = b.dataset.name || 'Customer';
+    msgKey = '';
+    $('mf').classList.remove('hidden');
+    chatPeople();
+    loadMessages(true);
+  });
+
+  async function loadMessages(force) {
+    if (!conv) return;
+    var r = await db.from('messages').select('id,sender_id,message')
+      .eq('conversation_id', conv)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true });
+    $('mh').textContent = 'Chat with ' + convName;
+    if (r.error) { $('msgs').innerHTML = '<div class="bad">' + esc(r.error.message) + '</div>'; return; }
+    var rows = r.data || [];
+    var key = conv + ':' + rows.length + ':' + (rows.length ? rows[rows.length - 1].id : 0);
+    if (!force && key === msgKey) return;      // nothing new: don't re-render / jump the scroll
+    msgKey = key;
+    $('msgs').innerHTML = rows.map(function (m) {
+      return '<div class="msg ' + (m.sender_id === me.id ? 'mine' : 'theirs') + '">' + esc(m.message) + '</div>';
+    }).join('') || 'No messages yet';
+    $('msgs').scrollTop = $('msgs').scrollHeight;
+  }
+
+  $('mf').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var text = $('mi').value.trim();
+    if (!text || !conv) return;
+    var r = await db.from('messages').insert({ conversation_id: conv, sender_id: me.id, message: text });
+    if (r.error) { showError('Could not send message', r.error.message); return; }
+    $('mi').value = '';
+    loadMessages(true);
+  });
+
+  function startPoll() {
+    if (pollTimer) return;
+    pollTimer = setInterval(function () {
+      if (currentPane === 'chats' && conv && !document.hidden) loadMessages(false);
+    }, 4000);
+  }
+
+  /* ---------- boot ---------- */
+
+  if (PH.initError) {
+    $('boot').classList.add('hidden');
+    showError('Startup error', PH.initError.message);
+  } else {
+    start().catch(function (e) {
+      $('boot').classList.add('hidden');
+      showError('Admin error', (e && e.message) || String(e));
+    });
+  }
+})();
+</script>
+</body>
+</html>

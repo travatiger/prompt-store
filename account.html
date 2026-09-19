@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>My Account — PromptHub</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+body{font-family:Arial,sans-serif;background:#f7f7fb;color:#17171c;line-height:1.5}
+a{color:inherit}
+.nav{background:#fff;border-bottom:1px solid #e8e8ee;padding:17px 20px}
+.nav-inner{max-width:900px;margin:auto;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:22px;font-weight:800;text-decoration:none}.logo span{font-weight:400}
+.back{color:#555;font-size:14px;text-decoration:none}
+.container{max-width:900px;margin:35px auto;padding:0 16px}
+.card{background:#fff;border:1px solid #e4e4eb;border-radius:18px;padding:24px;margin-bottom:16px}
+.narrow{max-width:440px;margin-left:auto;margin-right:auto}
+h1{font-size:26px}h2{font-size:20px;margin-bottom:12px}
+.muted{color:#6b6b75;font-size:14px}
+input,textarea{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 10px;font-size:15px;font-family:inherit}
+textarea{min-height:70px;resize:vertical}
+.btn{border:0;border-radius:10px;padding:11px 17px;background:#17171c;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px}
+.btn.ghost{background:#e9e9ef;color:#17171c}
+.btn.small{padding:7px 12px;font-size:13px}
+.btn:disabled{opacity:.6;cursor:wait}
+.link{background:none;border:0;color:#555;text-decoration:underline;cursor:pointer;font-size:13px;margin-top:10px;font-family:inherit}
+.seg{display:flex;gap:6px;margin-bottom:16px}
+.seg button{flex:1;border:1px solid #e0e0e8;background:#fff;border-radius:10px;padding:10px;font-weight:700;cursor:pointer;font-family:inherit}
+.seg button.on{background:#17171c;color:#fff;border-color:#17171c}
+.head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tabs button{border:1px solid #e0e0e8;background:#fff;border-radius:99px;padding:9px 16px;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px}
+.tabs button.on{background:#17171c;color:#fff;border-color:#17171c}
+.orow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;background:#eee;text-transform:uppercase;letter-spacing:.4px}
+.pill.paid{background:#dcfce7;color:#166534}.pill.pending{background:#fef3c7;color:#92400e}.pill.cancelled{background:#fee2e2;color:#991b1b}
+.instr{background:#f4f4f9;border-radius:10px;padding:12px;font-size:13px;white-space:pre-wrap;margin:12px 0 4px}
+.ok{color:#166534;font-size:14px;margin-top:10px}.err{color:#991b1b;font-size:14px;margin-top:10px}
+.msg{font-size:14px;margin-top:10px;min-height:20px}.msg.ok{color:#166534}.msg.err{color:#991b1b}
+pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-size:14px;white-space:pre-wrap;word-break:break-word;margin-top:12px;font-family:inherit}
+.chatbox{background:#f8fafc;border-radius:14px;padding:14px;height:340px;overflow:auto;border:1px solid #e5e7eb}
+.bubble{max-width:78%;padding:9px 12px;border-radius:12px;margin:7px 0;font-size:14px;white-space:pre-wrap;word-break:break-word}
+.bubble.mine{margin-left:auto;background:#17171c;color:#fff}.bubble.theirs{background:#e5e7eb}
+.compose{display:flex;gap:8px;margin-top:10px}.compose input{margin:0;flex:1}
+</style>
+</head>
+<body>
+<nav class="nav">
+<div class="nav-inner">
+<a class="logo" href="index.html">Prompt<span>Hub</span></a>
+<a class="back" href="index.html">← Back to Store</a>
+</div>
+</nav>
+
+<main class="container">
+<div class="card narrow" id="status" role="status">Loading…</div>
+
+<section class="card narrow" id="authView" hidden>
+<div class="seg">
+<button type="button" id="tabLogin" class="on">Login</button>
+<button type="button" id="tabSignup">Sign up</button>
+</div>
+
+<form id="loginForm">
+<label for="lEmail" class="muted">Email</label>
+<input id="lEmail" type="email" autocomplete="email" required>
+<label for="lPass" class="muted">Password</label>
+<input id="lPass" type="password" autocomplete="current-password" required>
+<button class="btn" style="width:100%">Login</button>
+<button type="button" class="link" id="forgot">Forgot password?</button>
+</form>
+
+<form id="signupForm" hidden>
+<label for="sName" class="muted">Full name</label>
+<input id="sName" type="text" autocomplete="name" maxlength="120" required>
+<label for="sEmail" class="muted">Email</label>
+<input id="sEmail" type="email" autocomplete="email" required>
+<label for="sPass" class="muted">Password (min. 8 characters)</label>
+<input id="sPass" type="password" autocomplete="new-password" minlength="8" required>
+<button class="btn" style="width:100%">Create account</button>
+</form>
+<div id="authMsg" class="msg" role="status"></div>
+</section>
+
+<section class="card narrow" id="resetView" hidden>
+<h2>Set a new password</h2>
+<form id="resetForm">
+<label for="rPass" class="muted">New password (min. 8 characters)</label>
+<input id="rPass" type="password" autocomplete="new-password" minlength="8" required>
+<button class="btn" style="width:100%">Save password</button>
+</form>
+<div id="resetMsg" class="msg" role="status"></div>
+</section>
+
+<section id="dashView" hidden>
+<div class="head">
+<h1 id="hello"></h1>
+<button class="btn ghost" id="logout" type="button">Logout</button>
+</div>
+<div class="tabs" id="tabs">
+<button type="button" data-tab="orders" class="on">Orders</button>
+<button type="button" data-tab="prompts">My Prompts</button>
+<button type="button" data-tab="chat">Support chat</button>
+</div>
+
+<div id="pane-orders"><div id="ordersList"></div></div>
+
+<div id="pane-prompts" hidden><div id="promptsList"></div></div>
+
+<div id="pane-chat" hidden>
+<div class="card">
+<h2>Message the store</h2>
+<div class="chatbox" id="chatBox" aria-live="polite"></div>
+<form class="compose" id="chatForm">
+<input id="chatInput" maxlength="2000" placeholder="Write a message..." aria-label="Message" required>
+<button class="btn">Send</button>
+</form>
+<div id="chatMsg" class="msg err" role="alert"></div>
+</div>
+</div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/common.js"></script>
+<script>
+(function () {
+  'use strict';
+  var PH = window.PH;
+  var db = PH.db;
+  var esc = PH.esc;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var me = null;
+  var currentTab = 'orders';
+  var convId = null;
+  var chatKey = '';
+  var pollTimer = null;
+  var promptsCache = [];
+
+  function setMsg(el, text, kind) {
+    el.textContent = text || '';
+    el.className = 'msg' + (kind ? ' ' + kind : '');
+  }
+
+  // Only allow redirects to a page in this same folder (no open redirect).
+  function safeNext() {
+    var n = new URLSearchParams(location.search).get('next');
+    return /^[a-z0-9_-]+\.html(\?[a-z0-9=&_-]*)?$/i.test(n || '') ? n : null;
+  }
+
+  function showView(name) {
+    $('status').hidden = true;
+    $('authView').hidden = name !== 'auth';
+    $('resetView').hidden = name !== 'reset';
+    $('dashView').hidden = name !== 'dash';
+  }
+
+  /* ---------- auth ---------- */
+
+  function authTab(which) {
+    var login = which === 'login';
+    $('tabLogin').classList.toggle('on', login);
+    $('tabSignup').classList.toggle('on', !login);
+    $('loginForm').hidden = !login;
+    $('signupForm').hidden = login;
+    setMsg($('authMsg'), '');
+  }
+  $('tabLogin').onclick = function () { authTab('login'); };
+  $('tabSignup').onclick = function () { authTab('signup'); };
+
+  $('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    setMsg($('authMsg'), 'Signing in…');
+    var r = await db.auth.signInWithPassword({ email: $('lEmail').value.trim(), password: $('lPass').value });
+    if (r.error) { setMsg($('authMsg'), r.error.message, 'err'); return; }
+    setMsg($('authMsg'), '');
+    await enter(r.data.user);
+  });
+
+  $('signupForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var pass = $('sPass').value;
+    if (pass.length < 8) { setMsg($('authMsg'), 'Password must be at least 8 characters.', 'err'); return; }
+    setMsg($('authMsg'), 'Creating account…');
+    var r = await db.auth.signUp({
+      email: $('sEmail').value.trim(),
+      password: pass,
+      options: { data: { full_name: $('sName').value.trim() } }
+    });
+    if (r.error) { setMsg($('authMsg'), r.error.message, 'err'); return; }
+    if (r.data.session) { setMsg($('authMsg'), ''); await enter(r.data.user); return; }
+    setMsg($('authMsg'), 'Account created. Please check your email to confirm it, then log in.', 'ok');
+  });
+
+  $('forgot').addEventListener('click', async function () {
+    var email = $('lEmail').value.trim();
+    if (!email) { setMsg($('authMsg'), 'Enter your email above first.', 'err'); return; }
+    var r = await db.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    if (r.error) { setMsg($('authMsg'), r.error.message, 'err'); return; }
+    setMsg($('authMsg'), 'If an account exists for that email, a reset link has been sent.', 'ok');
+  });
+
+  $('resetForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var r = await db.auth.updateUser({ password: $('rPass').value });
+    if (r.error) { setMsg($('resetMsg'), r.error.message, 'err'); return; }
+    setMsg($('resetMsg'), 'Password updated.', 'ok');
+    var s = await db.auth.getSession();
+    if (s.data && s.data.session) { history.replaceState(null, '', location.pathname); await enter(s.data.session.user); }
+  });
+
+  $('logout').addEventListener('click', async function () {
+    await db.auth.signOut();
+    signedOut();
+  });
+
+  function signedOut() {
+    me = null; convId = null; chatKey = '';
+    stopPoll();
+    showView('auth');
+  }
+
+  /* ---------- dashboard ---------- */
+
+  async function enter(user) {
+    var n = safeNext();
+    if (n) { location.replace(n); return; }
+    me = user;
+    var p = await db.from('profiles').select('full_name').eq('id', user.id).maybeSingle();
+    var name = (p.data && p.data.full_name) || user.email || 'there';
+    $('hello').textContent = 'Hi, ' + name;
+    showView('dash');
+    var h = location.hash.replace('#', '');
+    selectTab(['orders', 'prompts', 'chat'].indexOf(h) !== -1 ? h : 'orders');
+    startPoll();
+  }
+
+  function selectTab(name) {
+    currentTab = name;
+    document.querySelectorAll('#tabs button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.tab === name);
+    });
+    ['orders', 'prompts', 'chat'].forEach(function (t) { $('pane-' + t).hidden = t !== name; });
+    if (name === 'orders') loadOrders();
+    if (name === 'prompts') loadPrompts();
+    if (name === 'chat') loadChat(true);
+  }
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-tab]');
+    if (b) { history.replaceState(null, '', '#' + b.dataset.tab); selectTab(b.dataset.tab); }
+  });
+
+  /* ---------- orders ---------- */
+
+  function payForm(o) {
+    return '<form class="payform" data-order="' + Number(o.id) + '">' +
+      '<div class="instr">' + esc(PH.CONFIG.paymentInstructions) + '</div>' +
+      '<input name="pay_method" placeholder="Payment method (e.g. JazzCash, bank transfer)" maxlength="60" required>' +
+      '<input name="pay_ref" placeholder="Transaction ID / reference" minlength="3" maxlength="120" required>' +
+      '<textarea name="pay_note" placeholder="Note (optional)" maxlength="500"></textarea>' +
+      '<button class="btn">Submit payment</button><div class="msg" role="status"></div></form>';
+  }
+
+  function orderCard(o) {
+    var subs = o.payment_submissions || [];
+    var pending = subs.some(function (s) { return s.status === 'pending'; });
+    var rejected = !pending && subs.some(function (s) { return s.status === 'rejected'; });
+    var html = '<div class="card"><div class="orow"><b>' + esc((o.products && o.products.name) || 'Prompt') + '</b>' +
+      '<span class="pill ' + esc(o.status) + '">' + esc(o.status) + '</span></div>' +
+      '<div class="muted">Order #' + Number(o.id) + ' · ' + esc(PH.money(o.amount, o.currency)) + ' · ' +
+      esc(new Date(o.created_at).toLocaleString()) + '</div>';
+    if (o.status === 'paid') {
+      html += '<p class="ok">Payment verified. Your prompt is unlocked under <a href="#prompts" data-goto="prompts">My Prompts</a>.</p>';
+    } else if (o.status === 'pending') {
+      if (pending) {
+        html += '<p class="muted" style="margin-top:10px">Payment submitted. Waiting for verification.</p>';
+      } else {
+        if (rejected) html += '<p class="err">Your last payment submission was rejected. Please check the details and submit again.</p>';
+        html += payForm(o);
+      }
+    }
+    return html + '</div>';
+  }
+
+  async function loadOrders() {
+    var el = $('ordersList');
+    el.innerHTML = '<div class="card muted">Loading…</div>';
+    var r = await db.from('orders')
+      .select('id,amount,currency,status,created_at,products(name),payment_submissions(id,status)')
+      .order('created_at', { ascending: false });
+    if (r.error) { el.innerHTML = '<div class="card err">' + esc(r.error.message) + '</div>'; return; }
+    if (!r.data.length) {
+      el.innerHTML = '<div class="card muted">No orders yet. <a href="index.html#prompts">Browse prompts</a></div>';
+      return;
+    }
+    el.innerHTML = r.data.map(orderCard).join('');
+  }
+
+  $('ordersList').addEventListener('click', function (e) {
+    var g = e.target.closest('[data-goto]');
+    if (g) { e.preventDefault(); history.replaceState(null, '', '#' + g.dataset.goto); selectTab(g.dataset.goto); }
+  });
+
+  $('ordersList').addEventListener('submit', async function (e) {
+    var f = e.target.closest('form.payform');
+    if (!f) return;
+    e.preventDefault();
+    var msg = f.querySelector('.msg');
+    var btn = f.querySelector('button');
+    btn.disabled = true;
+    setMsg(msg, 'Submitting…');
+    var r = await db.rpc('submit_payment', {
+      p_order_id: Number(f.dataset.order),
+      p_method: f.elements.pay_method.value.trim(),
+      p_ref: f.elements.pay_ref.value.trim(),
+      p_note: f.elements.pay_note.value.trim()
+    });
+    if (r.error) { setMsg(msg, r.error.message, 'err'); btn.disabled = false; return; }
+    loadOrders();
+  });
+
+  /* ---------- prompts ---------- */
+
+  async function loadPrompts() {
+    var el = $('promptsList');
+    el.innerHTML = '<div class="card muted">Loading…</div>';
+    var r = await db.rpc('get_my_prompts');
+    if (r.error) { el.innerHTML = '<div class="card err">' + esc(r.error.message) + '</div>'; return; }
+    promptsCache = r.data || [];
+    if (!promptsCache.length) {
+      el.innerHTML = '<div class="card muted">Nothing unlocked yet. Prompts appear here after your payment is verified.</div>';
+      return;
+    }
+    el.innerHTML = promptsCache.map(function (p, i) {
+      var c = PH.CATEGORIES[p.category] || { label: p.category, icon: '📦' };
+      return '<div class="card"><div class="orow"><b>' + esc(c.icon + ' ' + p.name) + '</b>' +
+        '<button class="btn small" type="button" data-copy="' + i + '">Copy</button></div>' +
+        '<pre class="prompt">' + esc(p.prompt) + '</pre></div>';
+    }).join('');
+  }
+
+  $('promptsList').addEventListener('click', async function (e) {
+    var b = e.target.closest('button[data-copy]');
+    if (!b) return;
+    var p = promptsCache[Number(b.dataset.copy)];
+    if (!p) return;
+    var ok = await PH.copyText(p.prompt);
+    b.textContent = ok ? 'Copied ✓' : 'Copy failed';
+    setTimeout(function () { b.textContent = 'Copy'; }, 1800);
+  });
+
+  /* ---------- chat ---------- */
+
+  async function ensureConv() {
+    if (convId) return convId;
+    var r = await db.from('conversations').select('id').eq('customer_id', me.id).maybeSingle();
+    if (r.error) throw r.error;
+    if (r.data) convId = r.data.id;
+    return convId;
+  }
+
+  async function loadChat(force) {
+    var box = $('chatBox');
+    try {
+      await ensureConv();
+      if (!convId) {
+        if (force || chatKey !== 'empty') { box.innerHTML = '<div class="muted">No messages yet. Say hello!</div>'; chatKey = 'empty'; }
+        return;
+      }
+      var r = await db.from('messages')
+        .select('id,sender_id,message')
+        .eq('conversation_id', convId)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
+      if (r.error) throw r.error;
+      var rows = r.data || [];
+      var key = rows.length + ':' + (rows.length ? rows[rows.length - 1].id : 0);
+      if (!force && key === chatKey) return;     // nothing new: don't re-render / jump the scroll
+      chatKey = key;
+      box.innerHTML = rows.map(function (m) {
+        return '<div class="bubble ' + (m.sender_id === me.id ? 'mine' : 'theirs') + '">' + esc(m.message) + '</div>';
+      }).join('') || '<div class="muted">No messages yet. Say hello!</div>';
+      box.scrollTop = box.scrollHeight;
+    } catch (err) {
+      setMsg($('chatMsg'), err.message || String(err), 'err');
+    }
+  }
+
+  $('chatForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var text = $('chatInput').value.trim();
+    if (!text) return;
+    setMsg($('chatMsg'), '');
+    try {
+      await ensureConv();
+      if (!convId) {
+        var c = await db.from('conversations').insert({ customer_id: me.id }).select('id').single();
+        if (c.error) {
+          convId = null;
+          await ensureConv();                       // maybe it was just created in another tab
+          if (!convId) throw c.error;
+        } else {
+          convId = c.data.id;
+        }
+      }
+      var r = await db.from('messages').insert({ conversation_id: convId, sender_id: me.id, message: text });
+      if (r.error) throw r.error;
+      $('chatInput').value = '';
+      loadChat(true);
+    } catch (err) {
+      setMsg($('chatMsg'), err.message || String(err), 'err');
+    }
+  });
+
+  // Poll only while the chat tab is open and the browser tab is visible.
+  function startPoll() {
+    stopPoll();
+    pollTimer = setInterval(function () {
+      if (currentTab === 'chat' && !document.hidden && me) loadChat(false);
+    }, 5000);
+  }
+  function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+  /* ---------- start ---------- */
+
+  async function init() {
+    if (PH.initError) {
+      $('status').textContent = 'Could not start: ' + PH.initError.message;
+      return;
+    }
+    db.auth.onAuthStateChange(function (event) {
+      if (event === 'SIGNED_OUT') setTimeout(signedOut, 0);
+    });
+    var s = await db.auth.getSession();
+    var session = s.data && s.data.session;
+    if (PH.isRecovery && session) { showView('reset'); return; }
+    if (!session) { showView('auth'); return; }
+    await enter(session.user);
+  }
+
+  init().catch(function (e) { $('status').hidden = false; $('status').textContent = 'Error: ' + (e.message || e); });
+})();
+</script>
+</body>
+</html>

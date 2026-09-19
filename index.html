@@ -5,25 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="PromptHub - premium AI prompts for images, video, YouTube and business.">
 <title>PromptHub — Premium AI Prompts</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 body{font-family:Arial,sans-serif;background:#f7f7fb;color:#17171c;line-height:1.5}
 a{text-decoration:none;color:inherit}
 .nav{background:#fff;border-bottom:1px solid #e9e9ef;position:sticky;top:0;z-index:10}
 .nav-inner{max-width:1150px;margin:auto;padding:16px 20px;display:flex;align-items:center;gap:24px}
 .logo{font-size:22px;font-weight:800;margin-right:auto}.logo span{font-weight:400}
 .nav-link{font-size:14px;color:#555}
-.btn{border:0;border-radius:10px;padding:11px 17px;background:#17171c;color:#fff;font-weight:700;cursor:pointer;display:inline-block}
-.hero{max-width:1150px;margin:35px auto 20px;padding:55px 25px;text-align:center;background:#17171c;color:#fff;border-radius:24px}
+.btn{border:0;border-radius:10px;padding:11px 17px;background:#17171c;color:#fff;font-weight:700;cursor:pointer;display:inline-block;font-size:inherit;font-family:inherit}
+.hero{margin:35px max(20px,calc((100% - 1150px)/2)) 20px;padding:55px 25px;text-align:center;background:#17171c;color:#fff;border-radius:24px}
 .tag{display:inline-block;padding:7px 12px;border-radius:99px;background:#303038;font-size:12px;margin-bottom:18px}
 .hero h1{font-size:clamp(35px,7vw,62px);line-height:1.03;margin-bottom:16px}
 .hero p{max-width:650px;margin:0 auto 25px;color:#cfcfd7;font-size:17px}
 .search{max-width:620px;margin:auto;display:flex;background:#fff;padding:6px;border-radius:13px}
-.search input{flex:1;border:0;outline:0;padding:12px;font-size:15px;border-radius:9px}.search .btn{margin-left:5px}
+.search input{flex:1;min-width:0;border:0;outline:0;padding:12px;font-size:15px;border-radius:9px}.search .btn{margin-left:5px}
 .section{max-width:1150px;margin:32px auto;padding:0 20px}
-.section-head{margin-bottom:17px}.section-head h2{font-size:25px}.muted{color:#777;font-size:14px}
+.section-head{margin-bottom:17px}.section-head h2{font-size:25px}.muted{color:#6b6b75;font-size:14px}
 .cats{display:flex;gap:10px;overflow:auto;padding-bottom:5px}
-.cat{white-space:nowrap;background:#fff;border:1px solid #e7e7ed;padding:10px 15px;border-radius:99px;font-size:14px;cursor:pointer}
+.cat{white-space:nowrap;background:#fff;border:1px solid #e7e7ed;padding:10px 15px;border-radius:99px;font-size:14px;cursor:pointer;font-family:inherit;color:inherit}
 .cat.active{background:#17171c;color:#fff}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .card{background:#fff;border:1px solid #e7e7ed;border-radius:17px;padding:20px;transition:.2s}
@@ -33,12 +35,16 @@ a{text-decoration:none;color:inherit}
 .card h3{font-size:19px;margin:5px 0 8px}.card p{font-size:14px;color:#666;min-height:42px}
 .card-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:17px}
 .price{font-weight:800;font-size:18px}.card .btn{padding:9px 13px;font-size:13px}
+.notice{background:#fff;border:1px dashed #d5d5df;border-radius:15px;padding:24px;text-align:center;color:#555}
+.notice .btn{margin-top:12px}
 .features{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
 .feature{background:#fff;border:1px solid #e7e7ed;border-radius:15px;padding:20px}
 .feature strong{display:block;margin-bottom:5px}.feature span{font-size:13px;color:#666}
 footer{margin-top:50px;background:#17171c;color:#bbb;padding:30px 20px;text-align:center;font-size:13px}
-@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.features{grid-template-columns:1fr}.nav-link{display:none}}
-@media(max-width:520px){.grid{grid-template-columns:1fr}.hero{margin:15px 12px}.section{padding:0 12px}.hero h1{font-size:40px}}
+footer a{text-decoration:underline}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.features{grid-template-columns:1fr}.nav-link{display:none}.nav-link.nav-account{display:inline}}
+.nav .btn{white-space:nowrap}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.hero{margin:15px 12px}.section{padding:0 12px}.hero h1{font-size:40px}.nav-inner{gap:14px;padding:14px 12px}.nav .btn{padding:10px 13px;font-size:14px}}
 </style>
 </head>
 <body>
@@ -48,6 +54,7 @@ footer{margin-top:50px;background:#17171c;color:#bbb;padding:30px 20px;text-alig
 <a class="nav-link" href="#prompts">Prompts</a>
 <a class="nav-link" href="#categories">Categories</a>
 <a class="nav-link" href="#about">About</a>
+<a class="nav-link nav-account" href="account.html">Account</a>
 <a class="btn" href="#prompts">Explore Prompts</a>
 </div>
 </nav>
@@ -57,20 +64,20 @@ footer{margin-top:50px;background:#17171c;color:#bbb;padding:30px 20px;text-alig
 <div class="tag">PREMIUM AI PROMPTS</div>
 <h1>Turn your ideas into better AI results.</h1>
 <p>Discover ready-to-use prompts for AI images, videos, YouTube, business and content creation.</p>
-<div class="search">
-<input id="searchInput" type="search" placeholder="Search prompts...">
-<button class="btn" onclick="filterProducts()">Search</button>
+<div class="search" role="search">
+<input id="searchInput" type="search" placeholder="Search prompts..." aria-label="Search prompts">
+<button class="btn" id="searchBtn" type="button">Search</button>
 </div>
 </section>
 
 <section class="section" id="categories">
 <div class="section-head"><h2>Browse categories</h2></div>
-<div class="cats">
-<button class="cat active" onclick="setCategory('all',this)">All</button>
-<button class="cat" onclick="setCategory('image',this)">AI Images</button>
-<button class="cat" onclick="setCategory('video',this)">AI Video</button>
-<button class="cat" onclick="setCategory('youtube',this)">YouTube</button>
-<button class="cat" onclick="setCategory('business',this)">Business</button>
+<div class="cats" id="cats">
+<button class="cat active" type="button" data-cat="all" aria-pressed="true">All</button>
+<button class="cat" type="button" data-cat="image" aria-pressed="false">AI Images</button>
+<button class="cat" type="button" data-cat="video" aria-pressed="false">AI Video</button>
+<button class="cat" type="button" data-cat="youtube" aria-pressed="false">YouTube</button>
+<button class="cat" type="button" data-cat="business" aria-pressed="false">Business</button>
 </div>
 </section>
 
@@ -80,35 +87,9 @@ footer{margin-top:50px;background:#17171c;color:#bbb;padding:30px 20px;text-alig
 <div class="muted">Ready-to-use prompts for your next project.</div>
 </div>
 
-<div class="grid">
-<article class="card" data-category="image">
-<div class="icon">🖼️</div><div class="badge">AI Images</div>
-<h3>Master Image Prompt</h3>
-<p>Create detailed, high-quality AI images with a reusable master prompt.</p>
-<div class="card-bottom"><span class="price">$5</span><a class="btn" href="product.html?product=image">View Prompt</a></div>
-</article>
-
-<article class="card" data-category="youtube">
-<div class="icon">▶️</div><div class="badge">YouTube</div>
-<h3>YouTube Master Prompt</h3>
-<p>Generate video ideas, titles, scripts and content workflows with AI.</p>
-<div class="card-bottom"><span class="price">$3</span><a class="btn" href="product.html?product=youtube">View Prompt</a></div>
-</article>
-
-<article class="card" data-category="video">
-<div class="icon">🎬</div><div class="badge">AI Video</div>
-<h3>AI Video Prompt</h3>
-<p>Build structured prompts for cinematic AI video generation.</p>
-<div class="card-bottom"><span class="price">$4</span><a class="btn" href="product.html?product=video">View Prompt</a></div>
-</article>
-
-<article class="card" data-category="business">
-<div class="icon">💼</div><div class="badge">Business</div>
-<h3>Business Master Prompt</h3>
-<p>Organize ideas, research and marketing tasks with a powerful AI workflow.</p>
-<div class="card-bottom"><span class="price">$6</span><a class="btn" href="product.html?product=business">View Prompt</a></div>
-</article>
-</div>
+<div class="notice" id="status" role="status">Loading prompts…</div>
+<div class="grid" id="grid"></div>
+<div class="notice" id="empty" hidden></div>
 </section>
 
 <section class="section" id="about">
@@ -120,24 +101,88 @@ footer{margin-top:50px;background:#17171c;color:#bbb;padding:30px 20px;text-alig
 </section>
 </main>
 
-<footer>© 2026 PromptHub. All rights reserved.</footer>
+<footer>© 2026 PromptHub. All rights reserved. · <a href="legal.html">Terms &amp; Privacy</a></footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/common.js"></script>
 <script>
-let currentCategory='all';
-function setCategory(category,el){
-currentCategory=category;
-document.querySelectorAll('.cat').forEach(x=>x.classList.remove('active'));
-el.classList.add('active'); filterProducts();
-}
-function filterProducts(){
-const q=document.getElementById('searchInput').value.toLowerCase().trim();
-document.querySelectorAll('.card').forEach(card=>{
-const categoryOk=currentCategory==='all'||card.dataset.category===currentCategory;
-const searchOk=!q||card.innerText.toLowerCase().includes(q);
-card.style.display=categoryOk&&searchOk?'':'none';
-});
-}
-document.getElementById('searchInput').addEventListener('input',filterProducts);
+(function () {
+  'use strict';
+  var PH = window.PH;
+  var $ = function (id) { return document.getElementById(id); };
+  var products = [];
+  var currentCategory = 'all';
+
+  function card(p) {
+    var c = PH.CATEGORIES[p.category] || { label: p.category, icon: '📦' };
+    return '<article class="card">' +
+      '<div class="icon" aria-hidden="true">' + c.icon + '</div>' +
+      '<div class="badge">' + PH.esc(c.label) + '</div>' +
+      '<h3>' + PH.esc(p.name) + '</h3>' +
+      '<p>' + PH.esc(p.description) + '</p>' +
+      '<div class="card-bottom"><span class="price">' + PH.esc(PH.money(p.price, p.currency)) + '</span>' +
+      '<a class="btn" href="product.html?id=' + Number(p.id) + '">View Prompt</a></div>' +
+      '</article>';
+  }
+
+  // Search looks only at name + description (not price/badge text).
+  function render() {
+    var q = $('searchInput').value.toLowerCase().trim();
+    var list = products.filter(function (p) {
+      var okCat = currentCategory === 'all' || p.category === currentCategory;
+      var okQ = !q || (p.name + ' ' + p.description).toLowerCase().indexOf(q) !== -1;
+      return okCat && okQ;
+    });
+    $('grid').innerHTML = list.map(card).join('');
+    var empty = $('empty');
+    if (list.length) {
+      empty.hidden = true;
+    } else {
+      empty.hidden = false;
+      empty.textContent = products.length
+        ? 'No prompts match your search. Try another word or category.'
+        : 'No prompts are available yet. Please check back soon.';
+    }
+  }
+
+  function fail(message) {
+    var s = $('status');
+    s.hidden = false;
+    s.innerHTML = '<div>Could not load prompts.</div><div class="muted" style="margin-top:6px">' +
+      PH.esc(message) + '</div><button class="btn" type="button" id="retry">Try again</button>';
+    $('retry').onclick = load;
+  }
+
+  async function load() {
+    $('status').hidden = false;
+    $('status').textContent = 'Loading prompts…';
+    if (PH.initError) { fail(PH.initError.message); return; }
+    var r = await PH.db.from('products')
+      .select('id,name,category,description,price,currency')
+      .eq('active', true)
+      .order('id', { ascending: true });
+    if (r.error) { fail(r.error.message); return; }
+    products = r.data || [];
+    $('status').hidden = true;
+    render();
+  }
+
+  $('cats').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-cat]');
+    if (!b) return;
+    currentCategory = b.dataset.cat;
+    document.querySelectorAll('.cat').forEach(function (x) {
+      var on = x === b;
+      x.classList.toggle('active', on);
+      x.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    render();
+  });
+  $('searchInput').addEventListener('input', render);
+  $('searchBtn').addEventListener('click', render);
+
+  load();
+})();
 </script>
 </body>
-  </html>
+</html>
