@@ -153,18 +153,74 @@ footer a{text-decoration:underline}
     $('retry').onclick = load;
   }
 
+  function timeout(ms) {
+    return new Promise(function (_, reject) {
+      setTimeout(function () { reject(new Error('Supabase request timed out after ' + (ms / 1000) + ' seconds.')); }, ms);
+    });
+  }
+
+  async function loadViaRest() {
+    var base = PH.CONFIG.supabaseUrl.replace(/\/$/, '');
+    var url = base + '/rest/v1/products?select=id,name,category,description,price,currency&active=eq.true&order=id.asc';
+    var response = await Promise.race([
+      fetch(url, {
+        method: 'GET',
+        headers: {
+          apikey: PH.CONFIG.supabaseKey,
+          Authorization: 'Bearer ' + PH.CONFIG.supabaseKey,
+          Accept: 'application/json'
+        }
+      }),
+      timeout(10000)
+    ]);
+    if (!response.ok) {
+      var body = await response.text();
+      throw new Error('Supabase REST error ' + response.status + (body ? ': ' + body.slice(0, 240) : ''));
+    }
+    return await response.json();
+  }
+
   async function load() {
     $('status').hidden = false;
     $('status').textContent = 'Loading prompts…';
-    if (PH.initError) { fail(PH.initError.message); return; }
-    var r = await PH.db.from('products')
-      .select('id,name,category,description,price,currency')
-      .eq('active', true)
-      .order('id', { ascending: true });
-    if (r.error) { fail(r.error.message); return; }
-    products = r.data || [];
-    $('status').hidden = true;
-    render();
+
+    var lastError = null;
+
+    // First use the Supabase JS client.
+    if (!PH.initError && PH.db) {
+      try {
+        var r = await Promise.race([
+          PH.db.from('products')
+            .select('id,name,category,description,price,currency')
+            .eq('active', true)
+            .order('id', { ascending: true }),
+          timeout(10000)
+        ]);
+        if (!r.error) {
+          products = r.data || [];
+          $('status').hidden = true;
+          render();
+          return;
+        }
+        lastError = new Error(r.error.message);
+      } catch (e) {
+        lastError = e;
+      }
+    } else if (PH.initError) {
+      lastError = PH.initError;
+    }
+
+    // Fallback to Supabase REST API. This also works if the JS SDK/CDN has a problem.
+    try {
+      products = await loadViaRest();
+      $('status').hidden = true;
+      render();
+      return;
+    } catch (e) {
+      lastError = e;
+    }
+
+    fail(lastError ? lastError.message : 'Unknown Supabase connection error.');
   }
 
   $('cats').addEventListener('click', function (e) {
