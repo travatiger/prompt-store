@@ -1,119 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Prompt Store</title>
-
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f5f5f5;
-            color: #111;
-        }
-
-        header {
-            background: #111;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: auto;
-            padding: 30px 20px;
-        }
-
-        .hero {
-            background: white;
-            padding: 40px 20px;
-            text-align: center;
-            border-radius: 15px;
-            margin-bottom: 25px;
-        }
-
-        .hero h1 {
-            font-size: 36px;
-            margin-bottom: 10px;
-        }
-
-        .products {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .product {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 3px 15px rgba(0,0,0,0.08);
-        }
-
-        .product h2 {
-            margin-top: 0;
-        }
-
-        .price {
-            font-size: 22px;
-            font-weight: bold;
-            margin: 15px 0;
-        }
-
-        button {
-            width: 100%;
-            padding: 12px;
-            border: 0;
-            border-radius: 8px;
-            background: #111;
-            color: white;
-            font-size: 16px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Premium AI prompts for images, videos, YouTube and business.">
+  <title>PromptHub — Premium AI Prompts</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Inter,Arial,sans-serif;background:#f7f7fb;color:#17171c;line-height:1.5}
+    a{text-decoration:none;color:inherit}
+    .nav{background:#fff;border-bottom:1px solid #e9e9ef;position:sticky;top:0;z-index:10}
+    .nav-inner{max-width:1150px;margin:auto;padding:16px 20px;display:flex;align-items:center;gap:25px}
+    .logo{font-size:22px;font-weight:800;margin-right:auto}
+    .logo span{font-weight:400}
+    .nav a{font-size:14px;color:#555}
+    .btn{display:inline-block;border:0;border-radius:10px;padding:11px 17px;background:#17171c;color:#fff;font-weight:700;cursor:pointer}
+    .hero{max-width:1150px;margin:35px auto 20px;padding:55px 25px;text-align:center;background:#17171c;color:#fff;border-radius:24px}
+    .hero .tag{display:inline-block;padding:7px 12px;border-radius:99px;background:#303038;font-size:12px;margin-bottom:18px}
+    .hero h1{font-size:clamp(35px,7vw,62px);line-height:1.03;margin-bottom:16px}
+    .hero p{max-width:650px;margin:0 auto 25px;color:#cfcfd7;font-size:17px}
+    .search{max-width:620px;margin:0 auto;display:flex;background:#fff;padding:6px;border-radius:13px}
+    .search input{flex:1;border:0;outline:0;padding:12px;font-size:15px;border-radius:9px}
+    .section{max-width:1150px;margin:32px auto;padding:0 20px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:17px}
+    .section-head h2{font-size:25px}
+    .muted{color:#777;font-size:14px}
+    .cats{display:flex;gap:10px;overflow:auto;padding-bottom:5px}
+    .cat{white-space:nowrap;background:#fff;border:1px solid #e7e7ed;padding:10px 15px;border-radius:99px;font-size:14px;cursor:pointer}
+    .cat.active{background:#17171c;color:#fff;border-color:#17171c}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .card{background:#fff;border:1px solid #e7e7ed;border-radius:17px;padding:20px;transition:.2s}
+    .card:hover{transform:translateY(-3px);box-shadow:0 10px 30px #0000000c}
+    .icon{height:105px;border-radius:13px;background:#eeeef4;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:17px}
+    .badge{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.7px}
+    .card h3{font-size:19px;margin:5px 0 8px}
+    .card p{font-size:14px;color:#666;min-height:42px}
+    .card-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:17px}
+    .price{font-weight:800;font-size:18px}
+    .card .btn{padding:9px 13px;font-size:13px}
+    .features{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+    .feature{background:#fff;border:1px solid #e7e7ed;border-radius:15px;padding:20px}
+    .feature strong{display:block;margin-bottom:5px}
+    .feature span{font-size:13px;color:#666}
+    footer{margin-top:50px;background:#17171c;color:#bbb;padding:30px 20px;text-align:center;font-size:13px}
+    @media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.features{grid-template-columns:1fr}.nav a{display:none}}
+    @media(max-width:520px){.grid{grid-template-columns:1fr}.hero{margin:15px 12px}.section{padding:0 12px}.hero h1{font-size:40px}.search .btn{padding:10px 12px}}
+  </style>
 </head>
-
 <body>
 
-<header>
-    <h2>My Prompt Store</h2>
-</header>
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="#">Prompt<span>Hub</span></a>
+    <a href="#prompts">Prompts</a>
+    <a href="#categories">Categories</a>
+    <a href="#about">About</a>
+    <a class="btn" href="#prompts">Explore Prompts</a>
+  </div>
+</nav>
 
-<div class="container">
+<main>
+  <section class="hero">
+    <div class="tag">PREMIUM AI PROMPTS</div>
+    <h1>Turn your ideas into better AI results.</h1>
+    <p>Discover ready-to-use prompts for AI images, videos, YouTube, business and content creation.</p>
+    <div class="search">
+      <input id="searchInput" type="search" placeholder="Search prompts...">
+      <button class="btn" onclick="filterProducts()">Search</button>
+    </div>
+  </section>
 
-    <section class="hero">
-        <h1>Premium AI Prompts</h1>
-        <p>Discover powerful prompts for AI image, video and content creation.</p>
-    </section>
+  <section class="section" id="categories">
+    <div class="section-head">
+      <h2>Browse categories</h2>
+    </div>
+    <div class="cats">
+      <button class="cat active" onclick="setCategory('all',this)">All</button>
+      <button class="cat" onclick="setCategory('image',this)">AI Images</button>
+      <button class="cat" onclick="setCategory('video',this)">AI Video</button>
+      <button class="cat" onclick="setCategory('youtube',this)">YouTube</button>
+      <button class="cat" onclick="setCategory('business',this)">Business</button>
+    </div>
+  </section>
 
-    <section class="products">
+  <section class="section" id="prompts">
+    <div class="section-head">
+      <div>
+        <h2>Featured prompts</h2>
+        <div class="muted">Ready-to-use prompts for your next project.</div>
+      </div>
+    </div>
 
-        <div class="product">
-            <h2>Master Image Prompt</h2>
-            <p>Create amazing AI images with this powerful prompt.</p>
+    <div class="grid" id="productGrid">
+      <article class="card" data-category="image" data-name="Master Image Prompt">
+        <div class="icon">🖼️</div>
+        <div class="badge">AI Images</div>
+        <h3>Master Image Prompt</h3>
+        <p>Create detailed, high-quality AI images with a reusable master prompt.</p>
+        <div class="card-bottom"><span class="price">$5</span><button class="btn" onclick="showProduct('Master Image Prompt')">View Prompt</button></div>
+      </article>
 
-            <div class="price">$5</div>
+      <article class="card" data-category="youtube" data-name="YouTube Master Prompt">
+        <div class="icon">▶️</div>
+        <div class="badge">YouTube</div>
+        <h3>YouTube Master Prompt</h3>
+        <p>Generate video ideas, titles, scripts and content workflows with AI.</p>
+        <div class="card-bottom"><span class="price">$3</span><button class="btn" onclick="showProduct('YouTube Master Prompt')">View Prompt</button></div>
+      </article>
 
-            <button>View Prompt</button>
-        </div>
+      <article class="card" data-category="video" data-name="AI Video Prompt">
+        <div class="icon">🎬</div>
+        <div class="badge">AI Video</div>
+        <h3>AI Video Prompt</h3>
+        <p>Build structured prompts for cinematic AI video generation.</p>
+        <div class="card-bottom"><span class="price">$4</span><button class="btn" onclick="showProduct('AI Video Prompt')">View Prompt</button></div>
+      </article>
 
-        <div class="product">
-            <h2>YouTube Master Prompt</h2>
-            <p>Create better YouTube content with AI.</p>
+      <article class="card" data-category="business" data-name="Business Master Prompt">
+        <div class="icon">💼</div>
+        <div class="badge">Business</div>
+        <h3>Business Master Prompt</h3>
+        <p>Organize ideas, research and marketing tasks with a powerful AI workflow.</p>
+        <div class="card-bottom"><span class="price">$6</span><button class="btn" onclick="showProduct('Business Master Prompt')">View Prompt</button></div>
+      </article>
+    </div>
+  </section>
 
-            <div class="price">$3</div>
+  <section class="section" id="about">
+    <div class="features">
+      <div class="feature"><strong>⚡ Ready to use</strong><span>Copy a prompt and start creating faster.</span></div>
+      <div class="feature"><strong>🧠 Carefully structured</strong><span>Prompts are organized for practical AI workflows.</span></div>
+      <div class="feature"><strong>📱 Mobile friendly</strong><span>Designed to look clean on phones, tablets and desktops.</span></div>
+    </div>
+  </section>
+</main>
 
-            <button>View Prompt</button>
-        </div>
+<footer>© 2026 PromptHub. All rights reserved.</footer>
 
-    </section>
+<script>
+  let currentCategory = 'all';
 
-</div>
+  function setCategory(category, el){
+    currentCategory = category;
+    document.querySelectorAll('.cat').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    filterProducts();
+  }
 
+  function filterProducts(){
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    document.querySelectorAll('.card').forEach(card => {
+      const matchesCategory = currentCategory === 'all' || card.dataset.category === currentCategory;
+      const matchesSearch = !q || card.dataset.name.toLowerCase().includes(q) || card.innerText.toLowerCase().includes(q);
+      card.style.display = matchesCategory && matchesSearch ? '' : 'none';
+    });
+  }
+
+  function showProduct(name){
+    alert(name + "\\n\\nProduct detail page will be connected in the next step.");
+  }
+
+  document.getElementById('searchInput').addEventListener('input', filterProducts);
+</script>
 </body>
-  </html>
+</html>
