@@ -276,7 +276,7 @@ function money(v,c){var n=Number(v);if(!isFinite(n))return '-';try{return new In
 function card(p){
  var isFree=Number(p.price)===0;
  var cat=p.category==='image'?'AI Images':p.category==='video'?'AI Video':(p.category||'Other');
- var media=p.image_url?'<img src="'+esc(p.image_url)+'" alt="'+esc(p.name)+'" loading="lazy">':p.video_url?'<video src="'+esc(p.video_url)+'" controls preload="metadata" playsinline></video>':'<div class="card-icon">'+(p.category==='video'?'▶':'✦')+'</div>';
+ var first=(p._media&&p._media[0])||null; var media=first?(first.media_type==='image'?'<img src="'+esc(first.media_url)+'" alt="'+esc(p.name)+'" loading="lazy">':'<video src="'+esc(first.media_url)+'" controls preload="metadata" playsinline></video>'):(p.image_url?'<img src="'+esc(p.image_url)+'" alt="'+esc(p.name)+'" loading="lazy">':p.video_url?'<video src="'+esc(p.video_url)+'" controls preload="metadata" playsinline></video>':'<div class="card-icon">'+(p.category==='video'?'▶':'✦')+'</div>');
  return '<article class="card"><div class="card-media">'+media+'<span class="badge '+(isFree?'free':'')+'">'+(isFree?'Free':'Paid')+'</span></div><div class="category">'+(p.category==='video'?'▶':'▣')+' '+esc(cat)+'</div><h3>'+esc(p.name)+'</h3><p>'+esc(p.description||'')+'</p><div class="card-bottom"><span class="price '+(isFree?'free-price':'')+'">'+(isFree?'Free':esc(money(p.price,p.currency)))+'</span><a class="view-btn" href="product.html?id='+Number(p.id)+'">View Prompt →</a></div></article>'
 }
 function render(){
@@ -310,7 +310,9 @@ async function load(){
  try{
   var r=await fetch(url,{headers:{apikey:SUPABASE_KEY,Accept:'application/json'},cache:'no-store'});
   var body=await r.text();if(!r.ok)throw new Error('HTTP '+r.status);
-  products=JSON.parse(body);$('statCount').textContent=products.length+'+';
+  products=JSON.parse(body);
+  if(products.length){var ids=products.map(function(p){return Number(p.id)}).join(',');var mr=await fetch(SUPABASE_URL+'/rest/v1/product_media?select=id,product_id,media_type,media_url,sort_order&product_id=in.('+ids+')&order=sort_order.asc,id.asc',{headers:{apikey:SUPABASE_KEY,Accept:'application/json'},cache:'no-store'});if(mr.ok){var mediaRows=await mr.json();products.forEach(function(p){p._media=mediaRows.filter(function(m){return Number(m.product_id)===Number(p.id)});});}}
+  $('statCount').textContent=products.length+'+';
   $('status').hidden=true;render();
  }catch(e){
   $('status').textContent='Could not load prompts. Please refresh and try again.';

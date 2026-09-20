@@ -18,7 +18,7 @@ a{text-decoration:none;color:inherit}
 .container{max-width:900px;margin:45px auto;padding:0 20px}
 .product{background:#fff;border:1px solid #e4e4eb;border-radius:22px;padding:35px}
 .top{display:flex;gap:30px;align-items:center;margin-bottom:30px}
-.visual{width:210px;min-height:180px;background:#eeeef4;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:65px;flex-shrink:0;overflow:hidden}.visual img,.visual video{display:block;width:100%;height:auto;max-width:100%;object-fit:contain;border-radius:17px}.visual video{background:#111}
+.visual{width:320px;min-height:250px;background:#eeeef4;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:65px;flex-shrink:0;overflow:hidden;position:relative}.gallery-stage{width:100%;min-height:250px;display:flex;align-items:center;justify-content:center;background:#0c1220}.gallery-stage img,.gallery-stage video{display:block;width:100%;height:auto;max-height:420px;object-fit:contain}.gallery-stage video{background:#000}.gallery-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}.gallery-nav button{border:1px solid #d7d7df;background:#fff;border-radius:8px;padding:7px 11px;font-weight:800;cursor:pointer}.gallery-count{font-size:12px;color:#666}.gallery-thumbs{display:flex;gap:6px;overflow:auto;margin-top:8px;padding-bottom:3px}.gallery-thumb{width:58px;height:46px;flex:0 0 58px;border:2px solid transparent;border-radius:7px;overflow:hidden;background:#111;cursor:pointer;padding:0}.gallery-thumb.active{border-color:#17171c}.gallery-thumb img,.gallery-thumb video{width:100%;height:100%;object-fit:cover}.media-total{font-size:12px;color:#777;margin-top:5px}
 .category{font-size:12px;color:#6b6b75;text-transform:uppercase;letter-spacing:1px}
 h1{font-size:38px;line-height:1.15;margin:7px 0}
 .description{color:#666;margin:12px 0 15px}
@@ -37,7 +37,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
 .state{text-align:center;color:#555;padding:40px 10px}
 .state a{text-decoration:underline}
 .note{margin-top:20px;color:#6b6b75;font-size:13px}
-@media(max-width:650px){.top{flex-direction:column;align-items:flex-start}.visual{width:100%;height:150px}h1{font-size:30px}.product{padding:23px}}
+@media(max-width:650px){.top{flex-direction:column;align-items:flex-start}.visual{width:100%;min-height:220px}.gallery-stage{min-height:220px}.gallery-stage img,.gallery-stage video{max-height:360px}h1{font-size:30px}.product{padding:23px}}
 </style>
 </head>
 <body>
@@ -54,7 +54,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
 
 <div id="content" hidden>
 <div class="top">
-<div class="visual" id="visual" aria-hidden="true"></div>
+<div><div class="visual" id="visual" aria-hidden="true"></div><div id="galleryNav" class="gallery-nav" hidden></div><div id="galleryThumbs" class="gallery-thumbs" hidden></div><div id="mediaTotal" class="media-total"></div></div>
 <div>
 <div class="category" id="category"></div>
 <h1 id="title"></h1>
@@ -101,17 +101,39 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     stateMessage('This prompt was not found. <a href="index.html">Back to the store</a>');
   }
 
+  var gallery = [];
+  var galleryIndex = 0;
+
+  function renderGallery() {
+    var v = $('visual');
+    if (!gallery.length) { v.textContent = (PH.CATEGORIES[product.category] || {icon:'📦'}).icon; $('galleryNav').hidden=true; $('galleryThumbs').hidden=true; $('mediaTotal').textContent=''; return; }
+    var m = gallery[galleryIndex];
+    var media = m.media_type === 'image'
+      ? '<img src="' + PH.esc(m.media_url) + '" alt="' + PH.esc(product.name) + ' image ' + (galleryIndex+1) + '">'
+      : '<video src="' + PH.esc(m.media_url) + '" controls preload="metadata" playsinline></video>';
+    v.innerHTML = '<div class="gallery-stage">' + media + '</div>';
+    $('galleryNav').hidden = gallery.length <= 1;
+    $('galleryNav').innerHTML = '<button type="button" id="prevMedia">←</button><span class="gallery-count">' + (galleryIndex+1) + ' / ' + gallery.length + '</span><button type="button" id="nextMedia">→</button>';
+    $('galleryThumbs').hidden = gallery.length <= 1;
+    $('galleryThumbs').innerHTML = gallery.map(function(x,i){
+      return '<button type="button" class="gallery-thumb ' + (i===galleryIndex?'active':'') + '" data-gallery-index="' + i + '" aria-label="Media ' + (i+1) + '">' +
+        (x.media_type==='image' ? '<img src="'+PH.esc(x.media_url)+'" alt="">' : '<video src="'+PH.esc(x.media_url)+'" preload="metadata" muted></video>') + '</button>';
+    }).join('');
+    $('mediaTotal').textContent = gallery.length + ' media item' + (gallery.length===1?'':'s');
+  }
+
+  $('galleryNav').addEventListener('click',function(e){
+    if(e.target.id==='prevMedia'){galleryIndex=(galleryIndex-1+gallery.length)%gallery.length;renderGallery();}
+    if(e.target.id==='nextMedia'){galleryIndex=(galleryIndex+1)%gallery.length;renderGallery();}
+  });
+  $('galleryThumbs').addEventListener('click',function(e){var b=e.target.closest('[data-gallery-index]');if(!b)return;galleryIndex=Number(b.dataset.galleryIndex);renderGallery();});
+
   function renderProduct() {
     var c = PH.CATEGORIES[product.category] || { label: product.category, icon: '📦' };
     document.title = product.name + ' — PromptHub';
-    if (product.image_url || product.video_url) {
-      var media = '';
-      if (product.image_url) media += '<img src="' + PH.esc(product.image_url) + '" alt="' + PH.esc(product.name) + '">';
-      if (product.video_url) media += '<video src="' + PH.esc(product.video_url) + '" controls preload="metadata" playsinline></video>';
-      $('visual').innerHTML = media;
-    } else {
-      $('visual').textContent = c.icon;
-    }
+    gallery = product._media || [];
+    galleryIndex = 0;
+    renderGallery();
     $('category').textContent = c.label;
     $('title').textContent = product.name;
     $('description').textContent = product.description;
@@ -170,14 +192,22 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     var id = new URLSearchParams(location.search).get('id');
     if (!/^\d{1,12}$/.test(id || '')) { notFound(); return; }
 
-    var r = await PH.db.from('products')
-      .select('id,name,category,description,price,currency,image_url,video_url')
-      .eq('id', Number(id))
-      .maybeSingle();
+    var results = await Promise.all([
+      PH.db.from('products').select('id,name,category,description,price,currency,image_url,video_url').eq('id', Number(id)).maybeSingle(),
+      PH.db.from('product_media').select('id,media_type,media_url,sort_order').eq('product_id', Number(id)).order('sort_order', { ascending: true }).order('id', { ascending: true })
+    ]);
+    var r = results[0], mr = results[1];
     if (r.error) { stateMessage('Could not load this prompt: ' + PH.esc(r.error.message)); return; }
+    if (mr.error) { stateMessage('Could not load product media: ' + PH.esc(mr.error.message)); return; }
     if (!r.data) { notFound(); return; }
     product = r.data;
     if (product.category !== 'image' && product.category !== 'video') { notFound(); return; }
+    var galleryItems = (mr.data || []).slice();
+    if (!galleryItems.length) {
+      if (product.image_url) galleryItems.push({id:'legacy-image',media_type:'image',media_url:product.image_url,sort_order:0});
+      if (product.video_url) galleryItems.push({id:'legacy-video',media_type:'video',media_url:product.video_url,sort_order:1});
+    }
+    product._media = galleryItems;
     renderProduct();
 
     var s = await PH.db.auth.getSession();

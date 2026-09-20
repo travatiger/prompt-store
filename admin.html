@@ -18,7 +18,7 @@ button:disabled{opacity:.6;cursor:wait}
 .blue{background:#2563eb;color:#fff}.red{background:#dc2626;color:#fff}.green{background:#16a34a;color:#fff}.gray{background:#e5e7eb}
 .login{max-width:420px;margin:70px auto}
 .login input,.form input,.form textarea,.form select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:9px;margin:7px 0 12px;font-size:15px;font-family:inherit}
-.form textarea{min-height:90px;resize:vertical}.media-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.media-box{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fafafa}.media-box input[type=file]{width:100%;margin:7px 0}.media-preview{margin-top:8px;max-height:160px;overflow:hidden;border-radius:9px;background:#111}.media-preview img,.media-preview video{display:block;width:100%;max-height:160px;object-fit:contain}.small{font-size:12px;color:#6b7280}@media(max-width:700px){.media-grid{grid-template-columns:1fr}}
+.form textarea{min-height:90px;resize:vertical}.media-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.media-box{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fafafa}.media-box input[type=file]{width:100%;margin:7px 0}.media-preview{margin-top:8px;max-height:160px;overflow:hidden;border-radius:9px;background:#111}.media-preview img,.media-preview video{display:block;width:100%;max-height:160px;object-fit:contain}.current-media-item{border:1px solid #ddd;border-radius:10px;padding:8px;background:#fff}.current-media-item img,.current-media-item video{width:100%;height:110px;object-fit:contain;background:#111;border-radius:7px}.current-media-item button{margin-top:6px;padding:7px 9px;font-size:12px}.small{font-size:12px;color:#6b7280}@media(max-width:700px){.media-grid{grid-template-columns:1fr}}
 .form label.check{display:flex;align-items:center;gap:8px;margin:4px 0 14px}.form label.check input{width:auto;margin:0}
 .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
 .tab{background:#e5e7eb}.tab.active{background:#2563eb;color:#fff}
@@ -117,8 +117,7 @@ button:disabled{opacity:.6;cursor:wait}
 <h2 id="formTitle">Add Product</h2>
 <form id="pf">
 <input id="pid" type="hidden">
-<input id="pimageUrl" type="hidden">
-<input id="pvideoUrl" type="hidden">
+
 <input id="pn" placeholder="Product name" maxlength="120" required>
 <select id="pcat" aria-label="Category"></select>
 <input id="pp" type="number" step="0.01" min="0" placeholder="Price" required>
@@ -126,19 +125,22 @@ button:disabled{opacity:.6;cursor:wait}
 <textarea id="pd" placeholder="Public description (shown to everyone)"></textarea>
 <div class="media-grid">
   <div class="media-box">
-    <b>Product image</b>
-    <div class="small">JPG, PNG, WEBP, GIF — up to 5 MB</div>
-    <input id="pimage" type="file" accept="image/*">
-    <label class="check"><input id="removeImage" type="checkbox"> Remove current image</label>
+    <b>Product images</b>
+    <div class="small">Select 1, 5, 10 or more images. JPG, PNG, WEBP, GIF — up to 5 MB each.</div>
+    <input id="pimages" type="file" accept="image/*" multiple>
     <div id="imagePreview" class="media-preview hidden"></div>
   </div>
   <div class="media-box">
-    <b>Product video</b>
-    <div class="small">MP4, WebM, MOV — up to 50 MB</div>
-    <input id="pvideo" type="file" accept="video/*">
-    <label class="check"><input id="removeVideo" type="checkbox"> Remove current video</label>
+    <b>Product videos</b>
+    <div class="small">Select 1, 5, 10 or more videos. MP4, WebM, MOV — up to 50 MB each.</div>
+    <input id="pvideos" type="file" accept="video/*" multiple>
     <div id="videoPreview" class="media-preview hidden"></div>
   </div>
+</div>
+<div class="card" style="margin:12px 0 0;padding:12px;background:#fafafa;border:1px solid #e5e7eb">
+  <b>Current product media</b>
+  <div class="small">Remove individual items while editing. New files are added to the same Prompt.</div>
+  <div id="currentMedia" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px"></div>
 </div>
 <textarea id="pr" placeholder="The prompt (only paying customers can see this)" required></textarea>
 <label class="check"><input id="pa" type="checkbox" checked> Active (visible in the store)</label>
@@ -338,47 +340,76 @@ button:disabled{opacity:.6;cursor:wait}
     $('pcat').appendChild(o);
   });
 
+  var currentMedia = [];
+
   function resetProductForm() {
     $('pf').reset();
     $('pid').value = '';
     $('pc').value = 'USD';
     $('pa').checked = true;
-    $('pimage').value = '';
-    $('pvideo').value = '';
-    $('pimageUrl').value = '';
-    $('pvideoUrl').value = '';
-    $('removeImage').checked = false;
-    $('removeVideo').checked = false;
+    $('pimages').value = '';
+    $('pvideos').value = '';
     $('imagePreview').innerHTML = ''; $('imagePreview').classList.add('hidden');
     $('videoPreview').innerHTML = ''; $('videoPreview').classList.add('hidden');
+    $('currentMedia').innerHTML = '';
+    currentMedia = [];
     $('formTitle').textContent = 'Add Product';
     $('pcancel').hidden = true;
   }
   $('pcancel').addEventListener('click', function () { resetProductForm(); $('pm').textContent = ''; });
 
-  function mediaUrlPreview(type, url) {
-    if (!url) return;
+  function renderFilePreview(inputId, type) {
+    var input = $(inputId), files = Array.prototype.slice.call(input.files || []);
     var box = type === 'image' ? $('imagePreview') : $('videoPreview');
-    box.innerHTML = type === 'image'
-      ? '<img src="' + esc(url) + '" alt="Current product image">'
-      : '<video src="' + esc(url) + '" controls preload="metadata"></video>';
+    box.innerHTML = '';
+    if (!files.length) { box.classList.add('hidden'); return; }
+    files.forEach(function(file){
+      var url = URL.createObjectURL(file);
+      var el = type === 'image'
+        ? document.createElement('img')
+        : document.createElement('video');
+      el.src = url;
+      el.controls = type === 'video';
+      el.muted = true;
+      el.playsInline = true;
+      el.alt = file.name;
+      el.title = file.name;
+      box.appendChild(el);
+    });
+    box.style.display = 'grid';
+    box.style.gridTemplateColumns = 'repeat(auto-fill,minmax(120px,1fr))';
+    box.style.gap = '7px';
     box.classList.remove('hidden');
   }
 
-  function filePreview(inputId, type) {
-    var input = $(inputId);
-    var file = input.files && input.files[0];
-    if (!file) return;
-    var box = type === 'image' ? $('imagePreview') : $('videoPreview');
-    var url = URL.createObjectURL(file);
-    box.innerHTML = type === 'image'
-      ? '<img src="' + esc(url) + '" alt="New product image preview">'
-      : '<video src="' + esc(url) + '" controls preload="metadata"></video>';
-    box.classList.remove('hidden');
+  function renderCurrentMedia() {
+    var box = $('currentMedia');
+    box.innerHTML = currentMedia.length ? currentMedia.map(function(m){
+      var media = m.media_type === 'image'
+        ? '<img src="' + esc(m.media_url) + '" alt="Product image">'
+        : '<video src="' + esc(m.media_url) + '" controls preload="metadata"></video>';
+      return '<div class="current-media-item"><div class="small">' + esc(m.media_type) + ' #' + Number(m.sort_order || 0) + '</div>' + media +
+        '<button class="red" type="button" data-remove-media="' + Number(m.id) + '">Remove</button></div>';
+    }).join('') : '<div class="small">No gallery media yet.</div>';
   }
 
-  $('pimage').addEventListener('change', function () { filePreview('pimage', 'image'); });
-  $('pvideo').addEventListener('change', function () { filePreview('pvideo', 'video'); });
+  $('pimages').addEventListener('change', function () { renderFilePreview('pimages', 'image'); });
+  $('pvideos').addEventListener('change', function () { renderFilePreview('pvideos', 'video'); });
+
+  $('currentMedia').addEventListener('click', async function(e){
+    var b=e.target.closest('[data-remove-media]'); if(!b) return;
+    var id=Number(b.dataset.removeMedia);
+    if(!confirm('Remove this media from the product?')) return;
+    b.disabled=true;
+    var item=currentMedia.find(function(x){return Number(x.id)===id;});
+    if(item && item.storage_path){
+      await db.storage.from('product-media').remove([item.storage_path]);
+    }
+    var r=await db.from('product_media').delete().eq('id',id);
+    if(r.error){showError('Could not remove media',r.error.message);b.disabled=false;return;}
+    currentMedia=currentMedia.filter(function(x){return Number(x.id)!==id;});
+    renderCurrentMedia();
+  });
 
   async function uploadMedia(file, kind) {
     if (!file) return null;
@@ -416,26 +447,25 @@ button:disabled{opacity:.6;cursor:wait}
       var id = Number(ed.dataset.edit);
       clearError();
       var results = await Promise.all([
-        db.from('products').select('id,name,category,price,currency,description,image_url,video_url,active').in('category', ['image','video']).eq('id', id).maybeSingle(),
-        db.rpc('get_my_prompt', { p_product_id: id })
+        db.from('products').select('id,name,category,price,currency,description,active').in('category', ['image','video']).eq('id', id).maybeSingle(),
+        db.rpc('get_my_prompt', { p_product_id: id }),
+        db.from('product_media').select('id,product_id,media_type,media_url,storage_path,sort_order').eq('product_id', id).order('sort_order', { ascending: true }).order('id', { ascending: true })
       ]);
-      var p = results[0], pr = results[1];
+      var p = results[0], pr = results[1], mm = results[2];
       if (p.error || !p.data) { showError('Could not load product', (p.error && p.error.message) || 'Not found'); return; }
       if (pr.error) { showError('Could not load prompt', pr.error.message); return; }
+      if (mm.error) { showError('Could not load media', mm.error.message); return; }
       $('pid').value = p.data.id;
       $('pn').value = p.data.name;
       $('pcat').value = p.data.category;
       $('pp').value = p.data.price;
       $('pc').value = p.data.currency;
       $('pd').value = p.data.description || '';
-      $('pimageUrl').value = p.data.image_url || '';
-      $('pvideoUrl').value = p.data.video_url || '';
-      $('removeImage').checked = false; $('removeVideo').checked = false;
-      $('pimage').value = ''; $('pvideo').value = '';
+      $('pimages').value = ''; $('pvideos').value = '';
       $('imagePreview').innerHTML = ''; $('imagePreview').classList.add('hidden');
       $('videoPreview').innerHTML = ''; $('videoPreview').classList.add('hidden');
-      mediaUrlPreview('image', p.data.image_url);
-      mediaUrlPreview('video', p.data.video_url);
+      currentMedia = mm.data || [];
+      renderCurrentMedia();
       $('pr').value = pr.data || '';
       $('pa').checked = !!p.data.active;
       $('formTitle').textContent = 'Edit Product #' + p.data.id;
@@ -464,26 +494,35 @@ button:disabled{opacity:.6;cursor:wait}
     pm.textContent = 'Saving…';
     try {
       var idVal = $('pid').value;
-      var imageUrl = $('pimageUrl').value || null;
-      var videoUrl = $('pvideoUrl').value || null;
-      if ($('removeImage').checked) imageUrl = null;
-      if ($('removeVideo').checked) videoUrl = null;
-      if ($('pimage').files && $('pimage').files[0]) imageUrl = await uploadMedia($('pimage').files[0], 'image');
-      if ($('pvideo').files && $('pvideo').files[0]) videoUrl = await uploadMedia($('pvideo').files[0], 'video');
+      var r;
       pm.textContent = 'Saving product…';
-      var r = await db.rpc('admin_save_product', {
+      r = await db.rpc('admin_save_product', {
         p_id: idVal ? Number(idVal) : null,
         p_name: $('pn').value.trim(),
         p_category: $('pcat').value,
         p_price: Number($('pp').value),
         p_currency: $('pc').value.trim().toUpperCase(),
         p_description: $('pd').value.trim(),
-        p_image_url: imageUrl,
-        p_video_url: videoUrl,
+        p_image_url: null,
+        p_video_url: null,
         p_prompt: $('pr').value,
         p_active: $('pa').checked
       });
       if (r.error) { pm.className = 'bad'; pm.textContent = r.error.message; return; }
+      var productId = Number(r.data);
+      var imageFiles = Array.prototype.slice.call($('pimages').files || []);
+      var videoFiles = Array.prototype.slice.call($('pvideos').files || []);
+      var allFiles = imageFiles.map(function(f){return {file:f,kind:'image'};}).concat(videoFiles.map(function(f){return {file:f,kind:'video'};}));
+      var nextOrder = currentMedia.reduce(function(max,m){return Math.max(max, Number(m.sort_order)||0);}, 0) + 1;
+      for (var i=0;i<allFiles.length;i++) {
+        var item=allFiles[i];
+        var url=await uploadMedia(item.file,item.kind);
+        var ext=(item.file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'');
+        var pathMatch=url.match(/product-media\/([^?]+)/);
+        var storagePath=pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+        var ins=await db.from('product_media').insert({product_id:productId,media_type:item.kind,media_url:url,storage_path:storagePath,sort_order:nextOrder++});
+        if(ins.error) throw new Error('Could not save '+item.kind+' to gallery: '+ins.error.message);
+      }
       pm.className = 'ok';
       pm.textContent = 'Saved ✓';
       resetProductForm();
