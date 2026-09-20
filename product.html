@@ -22,7 +22,7 @@ a{text-decoration:none;color:inherit}
 .category{font-size:12px;color:#6b6b75;text-transform:uppercase;letter-spacing:1px}
 h1{font-size:38px;line-height:1.15;margin:7px 0}
 .description{color:#666;margin:12px 0 15px}
-.price{font-size:26px;font-weight:800}
+.price{font-size:26px;font-weight:800}.free-label{color:#0a8f63;font-weight:900}.payment-method{margin-top:14px;background:#fff;border:1px solid #e4e4eb;border-radius:14px;padding:16px}.payment-method img{display:block;width:min(250px,100%);height:auto;margin:12px auto;border-radius:12px;border:1px solid #e4e4eb}.payform{display:grid;gap:9px;margin-top:12px}.payform input,.payform textarea{width:100%;padding:11px;border:1px solid #d7d7df;border-radius:9px;font:inherit}.payform textarea{min-height:80px;resize:vertical}.request-msg{margin-top:8px;font-size:13px}
 .prompt-box{margin-top:10px;background:#17171c;color:white;border-radius:17px;padding:23px}
 .prompt-box h2{font-size:18px;margin-bottom:13px}
 #promptText{background:#292930;color:#ddd;border-radius:10px;padding:18px;font-size:14px;white-space:pre-wrap;word-break:break-word}
@@ -66,8 +66,20 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
 <div class="buy-box" id="buyBox" hidden>
 <h2>🔒 Unlock this prompt</h2>
 <p id="buyText"></p>
+<div id="paymentMethod" class="payment-method" hidden>
+  <b>💳 Payment Method — Binance Pay</b>
+  <div style="margin-top:7px">Send exactly <strong id="payAmount"></strong> to Binance UID <strong>984200359</strong>.</div>
+  <img src="assets/binance-qr.jpg" alt="Binance Pay QR code">
+  <div style="text-align:center;color:#666;font-size:13px">Scan the QR code or use the Binance UID above.</div>
+</div>
 <button class="buy" id="buyBtn" type="button"></button>
-<div id="buyMsg" role="alert"></div>
+<form id="paymentForm" class="payform" hidden>
+  <input name="pay_method" value="Binance Pay" maxlength="60" required>
+  <input name="pay_ref" placeholder="Transaction ID / reference" minlength="3" maxlength="120" required>
+  <textarea name="pay_note" placeholder="Note (optional)" maxlength="500"></textarea>
+  <button class="buy" type="submit">📨 Send Payment Request</button>
+  <div id="buyMsg" class="request-msg" role="alert"></div>
+</form>
 </div>
 
 <div class="prompt-box" id="promptBox" hidden>
@@ -91,6 +103,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
   var $ = function (id) { return document.getElementById(id); };
   var product = null;
   var promptText = '';
+  var activeOrderId = null;
 
   function stateMessage(html) {
     $('content').hidden = true;
@@ -137,7 +150,9 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     $('category').textContent = c.label;
     $('title').textContent = product.name;
     $('description').textContent = product.description;
-    $('price').textContent = PH.money(product.price, product.currency);
+    var isFree = !!product.is_free || Number(product.price) === 0;
+    $('price').innerHTML = isFree ? '<span class="free-label">FREE</span>' : PH.esc(PH.money(product.price, product.currency));
+    $('paymentMethod').hidden = isFree;
     $('state').hidden = true;
     $('content').hidden = false;
   }
@@ -152,13 +167,14 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
   function showBuy(loggedIn) {
     $('promptBox').hidden = true;
     $('buyBox').hidden = false;
-    var free = Number(product.price) === 0;
-    $('buyText').textContent = loggedIn
-      ? 'Place an order, pay, and submit your transaction ID. The full prompt appears here once the payment is verified.'
-      : 'Log in or create a free account to order this prompt.';
-    $('buyBtn').textContent = loggedIn
-      ? (free ? 'Get this prompt (free)' : 'Buy for ' + PH.money(product.price, product.currency))
-      : 'Log in to buy';
+    var free = !!product.is_free || Number(product.price) === 0;
+    $('paymentMethod').hidden = free || !loggedIn;
+    $('payAmount').textContent = free ? 'FREE' : PH.money(product.price, product.currency);
+    $('buyText').textContent = !loggedIn
+      ? 'Log in or create an account to continue.'
+      : (free ? 'This prompt is completely free. No payment is required.' : 'Pay using the method below, then send your transaction reference. Your request will appear in the admin Payments panel for manual review.');
+    $('buyBtn').textContent = !loggedIn ? 'Log in' : (free ? 'Get Free Prompt' : 'Create Payment Request');
+    $('paymentForm').hidden = true;
     $('buyBtn').onclick = function () { buy(loggedIn); };
   }
 
@@ -167,6 +183,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
       location.href = 'account.html?next=' + encodeURIComponent('product.html?id=' + product.id);
       return;
     }
+    var free = !!product.is_free || Number(product.price) === 0;
     var btn = $('buyBtn');
     btn.disabled = true;
     $('buyMsg').textContent = '';
@@ -176,8 +193,44 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
       btn.disabled = false;
       return;
     }
-    location.href = 'account.html#orders';
+    activeOrderId = Number(r.data);
+    if (free) {
+      var fr = await PH.db.rpc('get_my_prompt', { p_product_id: product.id });
+      if (!fr.error && fr.data) showPrompt(fr.data);
+      else $('buyMsg').textContent = fr.error ? fr.error.message : 'Free prompt is ready. Refresh the page to open it.';
+      btn.disabled = false;
+      return;
+    }
+    $('paymentForm').hidden = false;
+    $('buyBtn').hidden = true;
+    $('paymentMethod').hidden = false;
+    $('buyText').textContent = 'Payment request created. Complete the Binance payment, enter the transaction reference, and send it for admin verification.';
   }
+
+  $('paymentForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    var f=e.currentTarget;
+    var btn=f.querySelector('button[type=submit]');
+    var msg=$('buyMsg');
+    btn.disabled=true; msg.textContent='Sending request…';
+    var orderId=activeOrderId;
+    if(!orderId){
+      var orderResult=await PH.db.from('orders').select('id,status').eq('product_id',product.id).order('created_at',{ascending:false}).limit(1).maybeSingle();
+      if(orderResult.error || !orderResult.data){ msg.textContent=(orderResult.error&&orderResult.error.message)||'Order not found. Please create the payment request again.'; btn.disabled=false; return; }
+      orderId=Number(orderResult.data.id);
+    }
+    var r=await PH.db.rpc('submit_payment',{
+      p_order_id:orderId,
+      p_method:f.elements.pay_method.value.trim(),
+      p_ref:f.elements.pay_ref.value.trim(),
+      p_note:f.elements.pay_note.value.trim()
+    });
+    if(r.error){msg.textContent=r.error.message;btn.disabled=false;return;}
+    msg.textContent='Request sent ✓ Waiting for admin verification.';
+    f.querySelector('input[name=pay_ref]').disabled=true;
+    f.querySelector('textarea[name=pay_note]').disabled=true;
+    btn.disabled=true;
+  });
 
   $('copyBtn').addEventListener('click', async function () {
     var ok = await PH.copyText(promptText);
@@ -193,7 +246,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     if (!/^\d{1,12}$/.test(id || '')) { notFound(); return; }
 
     var results = await Promise.all([
-      PH.db.from('products').select('id,name,category,description,price,currency,image_url,video_url').eq('id', Number(id)).maybeSingle(),
+      PH.db.from('products').select('id,name,category,description,price,currency,is_free,image_url,video_url').eq('id', Number(id)).maybeSingle(),
       PH.db.from('product_media').select('id,media_type,media_url,sort_order').eq('product_id', Number(id)).order('sort_order', { ascending: true }).order('id', { ascending: true })
     ]);
     var r = results[0], mr = results[1];

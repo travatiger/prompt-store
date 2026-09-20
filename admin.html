@@ -120,8 +120,14 @@ button:disabled{opacity:.6;cursor:wait}
 
 <input id="pn" placeholder="Product name" maxlength="120" required>
 <select id="pcat" aria-label="Category"></select>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px">
+  <button type="button" id="freeBtn" class="gray" data-type="free">🎁 Free</button>
+  <button type="button" id="paidBtn" class="blue" data-type="paid">💳 Paid</button>
+</div>
 <input id="pp" type="number" step="0.01" min="0" placeholder="Price" required>
 <input id="pc" value="USD" maxlength="3" placeholder="Currency (3 letters, e.g. USD)" pattern="[A-Za-z]{3}" required>
+<input id="pFree" type="hidden" value="false">
+<div id="priceHint" class="small">Paid prompt: enter the amount and currency.</div>
 <textarea id="pd" placeholder="Public description (shown to everyone)"></textarea>
 <div class="media-grid">
   <div class="media-box">
@@ -342,6 +348,21 @@ button:disabled{opacity:.6;cursor:wait}
 
   var currentMedia = [];
 
+  function setPricingMode(mode) {
+    var free = mode === 'free';
+    $('pFree').value = free ? 'true' : 'false';
+    $('freeBtn').className = free ? 'blue' : 'gray';
+    $('paidBtn').className = free ? 'gray' : 'blue';
+    $('pp').disabled = free;
+    $('pc').disabled = free;
+    $('pp').required = !free;
+    $('pc').required = !free;
+    if (free) { $('pp').value = '0'; $('priceHint').textContent = 'Free prompt: users pay nothing. No dollar price will be shown.'; }
+    else { if (!Number($('pp').value)) $('pp').value = '5'; $('priceHint').textContent = 'Paid prompt: enter the amount and currency.'; }
+  }
+  $('freeBtn').addEventListener('click', function(){ setPricingMode('free'); });
+  $('paidBtn').addEventListener('click', function(){ setPricingMode('paid'); });
+
   function resetProductForm() {
     $('pf').reset();
     $('pid').value = '';
@@ -355,6 +376,7 @@ button:disabled{opacity:.6;cursor:wait}
     currentMedia = [];
     $('formTitle').textContent = 'Add Product';
     $('pcancel').hidden = true;
+    setPricingMode('paid');
   }
   $('pcancel').addEventListener('click', function () { resetProductForm(); $('pm').textContent = ''; });
 
@@ -426,7 +448,7 @@ button:disabled{opacity:.6;cursor:wait}
   }
 
   async function loadProducts() {
-    var r = await db.from('products').select('id,name,category,price,currency,active').in('category', ['image','video']).order('id', { ascending: false });
+    var r = await db.from('products').select('id,name,category,price,currency,is_free,active').in('category', ['image','video']).order('id', { ascending: false });
     $('xb').innerHTML = r.error
       ? '<tr><td colspan="5" class="bad">' + esc(r.error.message) + '</td></tr>'
       : (r.data || []).map(function (x) {
@@ -437,45 +459,35 @@ button:disabled{opacity:.6;cursor:wait}
             '<button class="gray" type="button" data-edit="' + id + '">Edit</button> ' +
             '<button class="' + (x.active ? 'red' : 'green') + '" type="button" data-toggle="' + id + '" data-active="' + (x.active ? '1' : '0') + '">' +
             (x.active ? 'Deactivate' : 'Activate') + '</button> ' +
-            '<button class="red" type="button" data-delete-product="' + id + '">Delete</button></td></tr>';
+            '<button class="red" type="button" data-delete="' + id + '">Delete permanently</button></td></tr>';
         }).join('') || '<tr><td colspan="5">No products yet</td></tr>';
   }
 
   $('xb').addEventListener('click', async function (e) {
     var ed = e.target.closest('button[data-edit]');
     var tg = e.target.closest('button[data-toggle]');
-    var dl = e.target.closest('button[data-delete-product]');
-    if (dl) {
-      var deleteId = Number(dl.dataset.deleteProduct);
-      if (!Number.isFinite(deleteId) || deleteId <= 0) return;
-      var productRow = dl.closest('tr');
-      var productName = productRow ? (productRow.querySelector('td') || {}).textContent || ('#' + deleteId) : ('#' + deleteId);
-      var firstConfirm = confirm('Delete this product permanently?\n\n' + productName.trim() + '\n\nThis removes the product and its gallery. Products with existing orders cannot be deleted.');
-      if (!firstConfirm) return;
-      var secondConfirm = confirm('Final confirmation: permanently delete this product?');
-      if (!secondConfirm) return;
-      dl.disabled = true;
+    var del = e.target.closest('button[data-delete]');
+    if (del) {
+      var did = Number(del.dataset.delete);
+      if (!confirm('PERMANENT DELETE\n\nThis removes the product, its prompt/media, and ALL orders/payment requests linked to this product. This cannot be undone.\n\nContinue?')) return;
+      del.disabled = true;
       clearError();
       try {
-        var mediaRes = await db.from('product_media').select('storage_path').eq('product_id', deleteId);
-        if (mediaRes.error) throw new Error(mediaRes.error.message);
-        var delRes = await db.rpc('admin_delete_product', { p_id: deleteId });
-        if (delRes.error) throw new Error(delRes.error.message);
-        var paths = (mediaRes.data || []).map(function(m){ return m.storage_path; }).filter(Boolean);
-        if (paths.length) {
-          var storageRes = await db.storage.from('product-media').remove(paths);
-          if (storageRes.error) showError('Product deleted, but some media files could not be removed', storageRes.error.message);
-        }
+        var mm = await db.from('product_media').select('storage_path').eq('product_id', did);
+        var rr = await db.rpc('admin_delete_product', { p_id: did });
+        if (rr.error) throw new Error(rr.error.message);
+        var paths = (mm.data || []).map(function(x){return x.storage_path;}).filter(Boolean);
+        if (paths.length) await db.storage.from('product-media').remove(paths);
         await Promise.all([loadProducts(), refreshStats()]);
       } catch (err) {
         showError('Could not delete product', err && err.message ? err.message : String(err));
-        dl.disabled = false;
+        del.disabled = false;
       }
     } else if (ed) {
       var id = Number(ed.dataset.edit);
       clearError();
       var results = await Promise.all([
-        db.from('products').select('id,name,category,price,currency,description,active').in('category', ['image','video']).eq('id', id).maybeSingle(),
+        db.from('products').select('id,name,category,price,currency,is_free,description,active').in('category', ['image','video']).eq('id', id).maybeSingle(),
         db.rpc('get_my_prompt', { p_product_id: id }),
         db.from('product_media').select('id,product_id,media_type,media_url,storage_path,sort_order').eq('product_id', id).order('sort_order', { ascending: true }).order('id', { ascending: true })
       ]);
@@ -488,6 +500,7 @@ button:disabled{opacity:.6;cursor:wait}
       $('pcat').value = p.data.category;
       $('pp').value = p.data.price;
       $('pc').value = p.data.currency;
+      setPricingMode(p.data.is_free || Number(p.data.price) === 0 ? 'free' : 'paid');
       $('pd').value = p.data.description || '';
       $('pimages').value = ''; $('pvideos').value = '';
       $('imagePreview').innerHTML = ''; $('imagePreview').classList.add('hidden');
@@ -530,6 +543,7 @@ button:disabled{opacity:.6;cursor:wait}
         p_category: $('pcat').value,
         p_price: Number($('pp').value),
         p_currency: $('pc').value.trim().toUpperCase(),
+        p_is_free: $('pFree').value === 'true',
         p_description: $('pd').value.trim(),
         p_image_url: null,
         p_video_url: null,

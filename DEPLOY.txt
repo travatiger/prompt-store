@@ -1,3 +1,12 @@
-PromptHub final package
+PROMPTHUB COMPLETE DEPLOY
 
-Upload the website files as-is. Run supabase/2026-09-20_COMPLETE_MULTIMEDIA_FIX.sql once in Supabase SQL Editor.
+1. Upload all files to the Vercel/GitHub project root, preserving folders.
+2. In Supabase SQL Editor, run:
+   supabase/2026-09-20_COMPLETE-FREE-PAID-PAYMENT-MULTIMEDIA.sql
+3. The Binance QR is included at:
+   assets/binance-qr.jpg
+4. Binance UID: 984200359
+5. Free products show FREE (no dollar price).
+6. Paid products show the configured price and payment request flow.
+7. Admin-only product management remains protected by Supabase admin checks.
+8. Existing orders are preserved by normal deletion rules unless the updated admin deletion policy explicitly allows destructive removal.

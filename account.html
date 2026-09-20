@@ -274,11 +274,12 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
 
   function orderCard(o) {
     var subs = o.payment_submissions || [];
+    var isFree = !!(o.products && o.products.is_free) || Number(o.amount) === 0;
     var pending = subs.some(function (s) { return s.status === 'pending'; });
     var rejected = !pending && subs.some(function (s) { return s.status === 'rejected'; });
     var html = '<div class="card"><div class="orow"><b>' + esc((o.products && o.products.name) || 'Prompt') + '</b>' +
       '<span class="pill ' + esc(o.status) + '">' + esc(o.status) + '</span></div>' +
-      '<div class="muted">Order #' + Number(o.id) + ' · ' + esc(PH.money(o.amount, o.currency)) + ' · ' +
+      '<div class="muted">Order #' + Number(o.id) + ' · ' + esc(isFree ? 'FREE' : PH.money(o.amount, o.currency)) + ' · ' +
       esc(new Date(o.created_at).toLocaleString()) + '</div>';
     if (o.status === 'paid') {
       html += '<p class="ok">Payment verified. Your prompt is unlocked under <a href="#prompts" data-goto="prompts">My Prompts</a>.</p>';
@@ -297,7 +298,7 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
     var el = $('ordersList');
     el.innerHTML = '<div class="card muted">Loading…</div>';
     var r = await db.from('orders')
-      .select('id,amount,currency,status,created_at,products(name),payment_submissions(id,status)')
+      .select('id,amount,currency,status,created_at,products(name,is_free),payment_submissions(id,status)')
       .order('created_at', { ascending: false });
     if (r.error) { el.innerHTML = '<div class="card err">' + esc(r.error.message) + '</div>'; return; }
     if (!r.data.length) {
