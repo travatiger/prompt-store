@@ -19,7 +19,6 @@ Included Pro features:
 - Reviews and ratings + admin moderation
 - Admin dashboard analytics
 - Product duplicate control
-- Prompt Lab: generator / enhancer / playground
 - Share / gift link / export prompt
 - Recently viewed + basic badges/referral code
 - PWA install support / service worker
