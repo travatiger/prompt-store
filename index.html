@@ -81,6 +81,19 @@ linear-gradient(120deg,#081735,#07112b 55%,#091b40);box-shadow:var(--shadow)}
 .card:hover{transform:translateY(-4px);border-color:#456dba;box-shadow:0 15px 35px rgba(0,0,0,.25)}
 .card-media{width:100%;height:auto;min-height:0;display:block;overflow:hidden;position:relative;background:#061226;border-radius:11px;margin-bottom:10px}
 .card-media img,.card-media video{display:block;width:100%;height:auto;max-width:100%;object-fit:contain;background:#061226}.card-media{background:#061226}.card-media img{background:#061226}.card-media video{background:#000}
+.gallery{position:relative;width:100%;overflow:hidden;border-radius:11px;background:#020b19}
+.gallery-track{display:flex;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.gallery-track::-webkit-scrollbar{display:none}
+.gallery-slide{position:relative;flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;background:#061226;min-height:150px}
+.gallery-slide img,.gallery-slide video{display:block;width:100%;height:auto;max-height:340px;object-fit:contain;background:#061226}
+.gallery-slide video{background:#000}
+.gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:32px;height:32px;border:1px solid rgba(255,255,255,.35);border-radius:50%;background:rgba(2,8,23,.78);color:#fff;font-weight:900;display:grid;place-items:center;padding:0}
+.gallery-arrow.prev{left:8px}.gallery-arrow.next{right:8px}
+.gallery-arrow[disabled]{opacity:.3;pointer-events:none}
+.gallery-dots{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;gap:4px;z-index:3;max-width:80%;overflow:hidden}
+.gallery-dot{width:6px;height:6px;border:0;border-radius:50%;background:#7183a3;padding:0;flex:0 0 auto}.gallery-dot.active{background:#fff;transform:scale(1.25)}
+.gallery-count{position:absolute;left:8px;bottom:8px;z-index:3;background:rgba(2,8,23,.72);color:#fff;border-radius:999px;padding:3px 7px;font-size:9px;font-weight:800}
+@media(max-width:720px){.gallery-slide{min-height:180px}.gallery-slide img,.gallery-slide video{max-height:390px}.gallery-arrow{width:34px;height:34px}}
 .card-icon{font-size:42px}
 .badge{position:absolute;right:8px;top:8px;padding:4px 8px;border-radius:8px;font-size:10px;font-weight:900;background:#9a36ff;color:#fff}.badge.free{background:#18dc9b;color:#03180f}
 .category{display:inline-flex;align-items:center;gap:5px;color:#9bb2d6;font-size:10px;font-weight:800;margin:1px 3px 5px}
@@ -273,11 +286,55 @@ var products=[],category='all',type='all';
 var $=function(id){return document.getElementById(id)};
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]})}
 function money(v,c){var n=Number(v);if(!isFinite(n))return '-';try{return new Intl.NumberFormat('en-US',{style:'currency',currency:c||'USD',minimumFractionDigits:n%1===0?0:2}).format(n)}catch(e){return n+' '+(c||'')}}
+function galleryMarkup(p){
+ var items=(p._media&&p._media.length)?p._media.slice():[];
+ if(!items.length){
+   if(p.image_url) items.push({media_type:'image',media_url:p.image_url});
+   if(p.video_url) items.push({media_type:'video',media_url:p.video_url});
+ }
+ if(!items.length) return '<div class="card-media"><div class="card-icon">'+(p.category==='video'?'▶':'✦')+'</div></div>';
+ var id='gallery-'+Number(p.id);
+ var slides=items.map(function(m,i){
+   var media=m.media_type==='image'
+     ? '<img src="'+esc(m.media_url)+'" alt="'+esc(p.name)+' image '+(i+1)+'" loading="lazy">'
+     : '<video src="'+esc(m.media_url)+'" controls preload="metadata" playsinline></video>';
+   return '<div class="gallery-slide">'+media+'</div>';
+ }).join('');
+ var dots=items.map(function(_,i){return '<button class="gallery-dot '+(i===0?'active':'')+'" type="button" data-gallery-dot="'+i+'" aria-label="Show media '+(i+1)+'"></button>';}).join('');
+ return '<div class="card-media"><div class="gallery" id="'+id+'"><div class="gallery-track">'+slides+'</div>'+
+   (items.length>1?'<button class="gallery-arrow prev" type="button" data-gallery-prev="'+id+'" aria-label="Previous media">‹</button><button class="gallery-arrow next" type="button" data-gallery-next="'+id+'" aria-label="Next media">›</button><div class="gallery-dots">'+dots+'</div><span class="gallery-count">1 / '+items.length+'</span>':'')+
+   '</div><span class="badge '+(Number(p.price)===0?'free':'')+'">'+(Number(p.price)===0?'Free':'Paid')+'</span></div>';
+}
 function card(p){
  var isFree=Number(p.price)===0;
- var cat=p.category==='image'?'AI Images':p.category==='video'?'AI Video':(p.category||'Other');
- var first=(p._media&&p._media[0])||null; var media=first?(first.media_type==='image'?'<img src="'+esc(first.media_url)+'" alt="'+esc(p.name)+'" loading="lazy">':'<video src="'+esc(first.media_url)+'" controls preload="metadata" playsinline></video>'):(p.image_url?'<img src="'+esc(p.image_url)+'" alt="'+esc(p.name)+'" loading="lazy">':p.video_url?'<video src="'+esc(p.video_url)+'" controls preload="metadata" playsinline></video>':'<div class="card-icon">'+(p.category==='video'?'▶':'✦')+'</div>');
- return '<article class="card"><div class="card-media">'+media+'<span class="badge '+(isFree?'free':'')+'">'+(isFree?'Free':'Paid')+'</span></div><div class="category">'+(p.category==='video'?'▶':'▣')+' '+esc(cat)+'</div><h3>'+esc(p.name)+'</h3><p>'+esc(p.description||'')+'</p><div class="card-bottom"><span class="price '+(isFree?'free-price':'')+'">'+(isFree?'Free':esc(money(p.price,p.currency)))+'</span><a class="view-btn" href="product.html?id='+Number(p.id)+'">View Prompt →</a></div></article>'
+ var cat=p.category==='image'?'AI Images':'AI Video';
+ return '<article class="card">'+galleryMarkup(p)+'<div class="category">'+(p.category==='video'?'▶':'▣')+' '+esc(cat)+'</div><h3>'+esc(p.name)+'</h3><p>'+esc(p.description||'')+'</p><div class="card-bottom"><span class="price '+(isFree?'free-price':'')+'">'+(isFree?'Free':esc(money(p.price,p.currency)))+'</span><a class="view-btn" href="product.html?id='+Number(p.id)+'">View Prompt →</a></div></article>';
+}
+function initGalleries(){
+ document.querySelectorAll('.gallery').forEach(function(g){
+   var track=g.querySelector('.gallery-track');
+   if(!track || g.dataset.ready==='1') return;
+   g.dataset.ready='1';
+   var slides=track.querySelectorAll('.gallery-slide');
+   var count=slides.length;
+   if(count<=1) return;
+   var countEl=g.querySelector('.gallery-count');
+   var dots=g.querySelectorAll('.gallery-dot');
+   var prev=g.querySelector('[data-gallery-prev]');
+   var next=g.querySelector('[data-gallery-next]');
+   function go(i){
+     i=Math.max(0,Math.min(count-1,i));
+     track.scrollTo({left:i*track.clientWidth,behavior:'smooth'});
+   }
+   prev.addEventListener('click',function(){go(Math.max(0,Math.round(track.scrollLeft/track.clientWidth)-1));});
+   next.addEventListener('click',function(){go(Math.min(count-1,Math.round(track.scrollLeft/track.clientWidth)+1));});
+   dots.forEach(function(d){d.addEventListener('click',function(){go(Number(d.dataset.galleryDot));});});
+   track.addEventListener('scroll',function(){
+     var i=Math.max(0,Math.min(count-1,Math.round(track.scrollLeft/Math.max(1,track.clientWidth))));
+     if(countEl) countEl.textContent=(i+1)+' / '+count;
+     dots.forEach(function(d,n){d.classList.toggle('active',n===i);});
+   },{passive:true});
+ });
 }
 function render(){
  var q=($('heroSearch').value+' '+$('topSearch').value).toLowerCase().trim();

@@ -126,20 +126,20 @@ button:disabled{opacity:.6;cursor:wait}
 <div class="media-grid">
   <div class="media-box">
     <b>Product images</b>
-    <div class="small">Select 1, 5, 10 or more images. JPG, PNG, WEBP, GIF — up to 5 MB each.</div>
+    <div class="small">Select multiple images. They are added to this same Prompt gallery. JPG, PNG, WEBP, GIF — up to 5 MB each.</div>
     <input id="pimages" type="file" accept="image/*" multiple>
     <div id="imagePreview" class="media-preview hidden"></div>
   </div>
   <div class="media-box">
     <b>Product videos</b>
-    <div class="small">Select 1, 5, 10 or more videos. MP4, WebM, MOV — up to 50 MB each.</div>
+    <div class="small">Select multiple videos. They are added to this same Prompt gallery. MP4, WebM, MOV — up to 50 MB each.</div>
     <input id="pvideos" type="file" accept="video/*" multiple>
     <div id="videoPreview" class="media-preview hidden"></div>
   </div>
 </div>
 <div class="card" style="margin:12px 0 0;padding:12px;background:#fafafa;border:1px solid #e5e7eb">
-  <b>Current product media</b>
-  <div class="small">Remove individual items while editing. New files are added to the same Prompt.</div>
+  <b>Current Prompt gallery</b>
+  <div class="small">Swipe through media on the store/product page. Remove individual items here; new files are added to the same Prompt.</div>
   <div id="currentMedia" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px"></div>
 </div>
 <textarea id="pr" placeholder="The prompt (only paying customers can see this)" required></textarea>
@@ -513,8 +513,10 @@ button:disabled{opacity:.6;cursor:wait}
       var imageFiles = Array.prototype.slice.call($('pimages').files || []);
       var videoFiles = Array.prototype.slice.call($('pvideos').files || []);
       var allFiles = imageFiles.map(function(f){return {file:f,kind:'image'};}).concat(videoFiles.map(function(f){return {file:f,kind:'video'};}));
+      if(allFiles.length) pm.textContent = 'Saving product and uploading '+allFiles.length+' media item(s)…';
       var nextOrder = currentMedia.reduce(function(max,m){return Math.max(max, Number(m.sort_order)||0);}, 0) + 1;
       for (var i=0;i<allFiles.length;i++) {
+        pm.textContent = 'Uploading media '+(i+1)+' of '+allFiles.length+'…';
         var item=allFiles[i];
         var url=await uploadMedia(item.file,item.kind);
         var ext=(item.file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'');
