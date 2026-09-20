@@ -1,11 +1,52 @@
-PromptHub PRO ALL-FEATURES
+PromptHub PRO ALL-FEATURES + Marketplace (bugfixed build)
 
 1. Keep a backup of your currently working PromptHub first.
 2. Upload the ZIP contents directly to your GitHub/Vercel project root.
-3. IMPORTANT: In Supabase SQL Editor, run ONCE:
-   supabase/2026-09-20-PRO-FEATURES.sql
+3. IMPORTANT: In Supabase SQL Editor, run ONCE, in this exact order:
+   a) supabase/2026-09-20-PRO-FEATURES.sql
+   b) supabase/2026-09-20-BUGFIX-PATCH.sql
+   c) supabase/2026-09-20-MARKETPLACE-SELLERS.sql   (new — multi-vendor sellers)
 4. Do NOT rerun the older COMPLETE-FREE-PAID-PAYMENT-MULTIMEDIA.sql if your current database is already working. It is included as a reference/backup only.
 5. Hard-refresh the site after deployment.
+
+--- New in this build: Marketplace / Sellers ---
+Any signed-in user can now become a seller instantly from Account → 💼 Sell
+(no approval needed to start). They set their own display name and their own
+payment info (e.g. their own Binance UID) — buyers pay them DIRECTLY, not you.
+Sellers manage their own products (add/edit/deactivate/delete, with image and
+video uploads) and approve/reject their own buyers' payment requests, since
+only they can see whether the money actually arrived in their account.
+
+You (the site admin) keep full control:
+ - Admin → 🧑‍💼 Sellers: see every seller, their payment info, how many
+   products they have, and how much commission they currently owe you. Ban
+   a seller at any time — this immediately hides all of their listings.
+ - A platform-wide commission percentage (default 10%) is editable from the
+   same tab. It's recorded automatically on every seller sale for
+   bookkeeping. Because payment goes straight from buyer to seller (no
+   payment gateway in this system), the commission is NOT auto-deducted —
+   you collect it from the seller separately, then mark each sale's
+   commission as "paid" (this granular per-order toggle isn't in the UI yet;
+   ask me to add it if you want it exposed as a button).
+ - Your existing admin-only product catalog is untouched and still works
+   exactly as before — seller products just live alongside it, clearly
+   marked "(seller-owned)" in the admin Products tab.
+
+PLEASE NOTE: your original schema.sql (create_order, submit_payment,
+get_my_prompt, review_payment, is_admin) was not included in this package,
+so the seller/commission fields on `orders` are filled automatically by a
+database trigger rather than by editing those functions — this was the
+safest way to add the feature without seeing their exact original logic.
+If your real create_order/submit_payment do anything beyond what's described
+above, let me know and I'll adjust the trigger to match.
+
+--- Fixes carried over from the previous build ---
+- product.html's loadReviews()/loadRelated() were undefined, breaking every
+  product page. Now implemented for real.
+- Favorite/Share/Export/Gift buttons on the product page had no click
+  handlers. Now wired up.
+- Storefront views/rating were always 0 and "Popular" sort didn't work.
+  Fixed with a public, aggregate-only stats RPC.
 
 Included Pro features:
 - Favorites
