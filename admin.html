@@ -436,14 +436,42 @@ button:disabled{opacity:.6;cursor:wait}
             '</td><td>' + (x.active ? '<span class="ok">Yes</span>' : '<span class="bad">No</span>') + '</td><td>' +
             '<button class="gray" type="button" data-edit="' + id + '">Edit</button> ' +
             '<button class="' + (x.active ? 'red' : 'green') + '" type="button" data-toggle="' + id + '" data-active="' + (x.active ? '1' : '0') + '">' +
-            (x.active ? 'Deactivate' : 'Activate') + '</button></td></tr>';
+            (x.active ? 'Deactivate' : 'Activate') + '</button> ' +
+            '<button class="red" type="button" data-delete-product="' + id + '">Delete</button></td></tr>';
         }).join('') || '<tr><td colspan="5">No products yet</td></tr>';
   }
 
   $('xb').addEventListener('click', async function (e) {
     var ed = e.target.closest('button[data-edit]');
     var tg = e.target.closest('button[data-toggle]');
-    if (ed) {
+    var dl = e.target.closest('button[data-delete-product]');
+    if (dl) {
+      var deleteId = Number(dl.dataset.deleteProduct);
+      if (!Number.isFinite(deleteId) || deleteId <= 0) return;
+      var productRow = dl.closest('tr');
+      var productName = productRow ? (productRow.querySelector('td') || {}).textContent || ('#' + deleteId) : ('#' + deleteId);
+      var firstConfirm = confirm('Delete this product permanently?\n\n' + productName.trim() + '\n\nThis removes the product and its gallery. Products with existing orders cannot be deleted.');
+      if (!firstConfirm) return;
+      var secondConfirm = confirm('Final confirmation: permanently delete this product?');
+      if (!secondConfirm) return;
+      dl.disabled = true;
+      clearError();
+      try {
+        var mediaRes = await db.from('product_media').select('storage_path').eq('product_id', deleteId);
+        if (mediaRes.error) throw new Error(mediaRes.error.message);
+        var delRes = await db.rpc('admin_delete_product', { p_id: deleteId });
+        if (delRes.error) throw new Error(delRes.error.message);
+        var paths = (mediaRes.data || []).map(function(m){ return m.storage_path; }).filter(Boolean);
+        if (paths.length) {
+          var storageRes = await db.storage.from('product-media').remove(paths);
+          if (storageRes.error) showError('Product deleted, but some media files could not be removed', storageRes.error.message);
+        }
+        await Promise.all([loadProducts(), refreshStats()]);
+      } catch (err) {
+        showError('Could not delete product', err && err.message ? err.message : String(err));
+        dl.disabled = false;
+      }
+    } else if (ed) {
       var id = Number(ed.dataset.edit);
       clearError();
       var results = await Promise.all([
