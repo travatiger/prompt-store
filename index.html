@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="PromptHub - premium AI prompts for images, video, YouTube and business.">
+<meta name="description" content="PromptHub - premium AI prompts for images and video.">
 <title>PromptHub — Premium AI Prompts</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E">
 <style>
@@ -63,7 +63,7 @@ footer a{text-decoration:underline}
 <section class="hero">
 <div class="tag">PREMIUM AI PROMPTS</div>
 <h1>Turn your ideas into better AI results.</h1>
-<p>Discover ready-to-use prompts for AI images, videos, YouTube, business and content creation.</p>
+<p>Discover ready-to-use prompts for AI images and video.</p>
 <div class="search" role="search">
 <input id="searchInput" type="search" placeholder="Search prompts..." aria-label="Search prompts">
 <button class="btn" id="searchBtn" type="button">Search</button>
@@ -76,8 +76,6 @@ footer a{text-decoration:underline}
 <button class="cat active" type="button" data-cat="all" aria-pressed="true">All</button>
 <button class="cat" type="button" data-cat="image" aria-pressed="false">AI Images</button>
 <button class="cat" type="button" data-cat="video" aria-pressed="false">AI Video</button>
-<button class="cat" type="button" data-cat="youtube" aria-pressed="false">YouTube</button>
-<button class="cat" type="button" data-cat="business" aria-pressed="false">Business</button>
 </div>
 </section>
 
@@ -135,8 +133,6 @@ footer a{text-decoration:underline}
   var CATEGORIES = {
     image: { label: 'AI Images', icon: '🖼️' },
     video: { label: 'AI Video', icon: '🎬' },
-    youtube: { label: 'YouTube', icon: '▶️' },
-    business: { label: 'Business', icon: '💼' }
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -187,6 +183,7 @@ footer a{text-decoration:underline}
     var q = $('searchInput').value.toLowerCase().trim();
 
     var list = products.filter(function (p) {
+      if (p.category !== 'image' && p.category !== 'video') return false;
       var okCat = currentCategory === 'all' || p.category === currentCategory;
       var okQ = !q || ((p.name || '') + ' ' + (p.description || '')).toLowerCase().indexOf(q) !== -1;
       return okCat && okQ;

@@ -395,7 +395,7 @@ button:disabled{opacity:.6;cursor:wait}
   }
 
   async function loadProducts() {
-    var r = await db.from('products').select('id,name,category,price,currency,active').order('id', { ascending: false });
+    var r = await db.from('products').select('id,name,category,price,currency,active').in('category', ['image','video']).order('id', { ascending: false });
     $('xb').innerHTML = r.error
       ? '<tr><td colspan="5" class="bad">' + esc(r.error.message) + '</td></tr>'
       : (r.data || []).map(function (x) {
@@ -416,7 +416,7 @@ button:disabled{opacity:.6;cursor:wait}
       var id = Number(ed.dataset.edit);
       clearError();
       var results = await Promise.all([
-        db.from('products').select('id,name,category,price,currency,description,image_url,video_url,active').eq('id', id).maybeSingle(),
+        db.from('products').select('id,name,category,price,currency,description,image_url,video_url,active').in('category', ['image','video']).eq('id', id).maybeSingle(),
         db.rpc('get_my_prompt', { p_product_id: id })
       ]);
       var p = results[0], pr = results[1];

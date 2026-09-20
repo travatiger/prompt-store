@@ -177,6 +177,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     if (r.error) { stateMessage('Could not load this prompt: ' + PH.esc(r.error.message)); return; }
     if (!r.data) { notFound(); return; }
     product = r.data;
+    if (product.category !== 'image' && product.category !== 'video') { notFound(); return; }
     renderProduct();
 
     var s = await PH.db.auth.getSession();
