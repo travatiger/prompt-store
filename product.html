@@ -58,8 +58,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
 <div><div class="visual" id="visual" aria-hidden="true"></div><div id="galleryNav" class="gallery-nav" hidden></div><div id="galleryThumbs" class="gallery-thumbs" hidden></div><div id="mediaTotal" class="media-total"></div></div>
 <div>
 <div class="category" id="category"></div>
-<h1 id="title"></h1>
-<div class="muted" id="soldBy" hidden style="margin:-4px 0 8px;font-size:13px"></div>
+<h1 id="title"></h1><div id="sellerBy" style="margin:6px 0 12px;color:#6b7280;font-size:13px"></div>
 <p class="description" id="description"></p>
 <div class="price" id="price"></div>
 </div>
@@ -68,7 +67,12 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
 <div class="buy-box" id="buyBox" hidden>
 <h2>🔒 Unlock this prompt</h2>
 <p id="buyText"></p>
-<div id="paymentMethod" class="payment-method" hidden></div>
+<div id="paymentMethod" class="payment-method" hidden>
+  <b>💳 Payment Method — Binance Pay</b>
+  <div style="margin-top:7px">Send exactly <strong id="payAmount"></strong> to Binance UID <strong>984200359</strong>.</div>
+  <img src="assets/binance-qr.jpg" alt="Binance Pay QR code">
+  <div style="text-align:center;color:#666;font-size:13px">Scan the QR code or use the Binance UID above.</div>
+</div>
 <button class="buy" id="buyBtn" type="button"></button>
 <form id="paymentForm" class="payform" hidden>
   <input name="pay_method" value="Binance Pay" maxlength="60" required>
@@ -105,8 +109,6 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
   var promptText = '';
   var activeOrderId = null;
   var favorites = [];
-  var sellerPayment = null;
-  var lastLoggedIn = false;
   function favKey(){return 'ph_favorites_v1';}
   function loadFavs(){try{favorites=JSON.parse(localStorage.getItem(favKey())||'[]').map(Number)}catch(e){favorites=[]}}
   function isFav(){return favorites.indexOf(Number(product.id))!==-1}
@@ -250,7 +252,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     galleryIndex = 0;
     renderGallery();
     $('category').textContent = c.label;
-    $('title').textContent = product.name;
+    $('title').textContent = product.name; var sp=product.profiles; $('sellerBy').innerHTML=sp&&sp.username?('Sold by <a href="seller-profile.html?username='+encodeURIComponent(sp.username)+'" style="text-decoration:underline;color:#7b61ff">@'+PH.esc(sp.username)+'</a>'):'';
     $('description').textContent = product.description;
     var isFree = !!product.is_free || Number(product.price) === 0;
     $('price').innerHTML = isFree ? '<span class="free-label">FREE</span>' : PH.esc(PH.money(product.price, product.currency));
@@ -268,27 +270,14 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
   }
 
   function showBuy(loggedIn) {
-    lastLoggedIn = loggedIn;
     $('promptBox').hidden = true;
     $('buyBox').hidden = false;
     var free = !!product.is_free || Number(product.price) === 0;
-    var amountText = free ? 'FREE' : PH.money(product.price, product.currency);
     $('paymentMethod').hidden = free || !loggedIn;
-    if (!free && loggedIn) {
-      if (sellerPayment) {
-        $('paymentMethod').innerHTML = '<b>💳 Payment Method — ' + PH.esc(sellerPayment.payment_method || 'Direct payment') + '</b>' +
-          '<div style="margin-top:7px">Send exactly <strong>' + PH.esc(amountText) + '</strong> to the seller: <strong>' + PH.esc(sellerPayment.payment_details || '') + '</strong>.</div>' +
-          '<div style="color:#666;font-size:13px;margin-top:6px">This prompt is sold by an independent seller — you are paying them directly.</div>';
-      } else {
-        $('paymentMethod').innerHTML = '<b>💳 Payment Method — Binance Pay</b>' +
-          '<div style="margin-top:7px">Send exactly <strong>' + PH.esc(amountText) + '</strong> to Binance UID <strong>984200359</strong>.</div>' +
-          '<img src="assets/binance-qr.jpg" alt="Binance Pay QR code">' +
-          '<div style="text-align:center;color:#666;font-size:13px">Scan the QR code or use the Binance UID above.</div>';
-      }
-    }
+    $('payAmount').textContent = free ? 'FREE' : PH.money(product.price, product.currency);
     $('buyText').textContent = !loggedIn
       ? 'Log in or create an account to continue.'
-      : (free ? 'This prompt is completely free. No payment is required.' : 'Pay using the method above, then send your transaction reference. Your request will be reviewed manually.');
+      : (free ? 'This prompt is completely free. No payment is required.' : 'Pay using the method below, then send your transaction reference. Your request will appear in the admin Payments panel for manual review.');
     $('buyBtn').textContent = !loggedIn ? 'Log in' : (free ? 'Get Free Prompt' : 'Create Payment Request');
     $('paymentForm').hidden = true;
     $('buyBtn').onclick = function () { buy(loggedIn); };
@@ -406,7 +395,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     if (!/^\d{1,12}$/.test(id || '')) { notFound(); return; }
 
     var results = await Promise.all([
-      PH.db.from('products').select('id,name,category,description,price,currency,is_free,image_url,video_url,seller_id').eq('id', Number(id)).maybeSingle(),
+      PH.db.from('products').select('id,name,category,description,price,currency,is_free,image_url,video_url,seller_id,profiles(username,full_name)').eq('id', Number(id)).maybeSingle(),
       PH.db.from('product_media').select('id,media_type,media_url,sort_order').eq('product_id', Number(id)).order('sort_order', { ascending: true }).order('id', { ascending: true })
     ]);
     var r = results[0], mr = results[1];
@@ -425,24 +414,11 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     PH.db.rpc('get_public_product_stats',{p_ids:[product.id]}).then(function(sr){
       if (!sr.error && sr.data && sr.data[0]) $('viewCount').textContent = '👁 ' + Number(sr.data[0].views_count||0) + ' views';
     }).catch(function(){});
-    if (product.seller_id) {
-      PH.db.from('sellers_public').select('seller_display_name').eq('id', product.seller_id).maybeSingle().then(function (sp) {
-        if (sp.data) { $('soldBy').textContent = '🧑‍💻 Sold by ' + sp.data.seller_display_name; $('soldBy').hidden = false; }
-      }).catch(function(){});
-      var isFreeProd = !!product.is_free || Number(product.price) === 0;
-      if (!isFreeProd) {
-        PH.db.rpc('get_product_payment_info', { p_product_id: product.id }).then(function (pi) {
-          if (!pi.error && pi.data && pi.data[0]) sellerPayment = pi.data[0];
-          showBuy(lastLoggedIn);
-        }).catch(function(){});
-      }
-    }
     loadReviews(); loadRelated();
     renderProduct();
 
     var s = await PH.db.auth.getSession();
     var loggedIn = !!(s.data && s.data.session);
-    lastLoggedIn = loggedIn;
     if (loggedIn) {
       var pr = await PH.db.rpc('get_my_prompt', { p_product_id: product.id });
       if (!pr.error && pr.data) { showPrompt(pr.data); return; }

@@ -46,11 +46,6 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
 .bubble.mine{margin-left:auto;background:#17171c;color:#fff}.bubble.theirs{background:#e5e7eb}
 .compose{display:flex;gap:8px;margin-top:10px}.compose input{margin:0;flex:1}
 .binance-pay-box{margin-top:12px;padding:14px;border:1px solid #e4e4eb;border-radius:14px;background:#fafafe;text-align:left}.binance-pay-box b{font-size:15px}.binance-pay-box img{background:#fff}
-.sp-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.sp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.sp-actions .btn.small.green{background:#166534}.sp-actions .btn.small.red{background:#991b1b}
-.sp-stat{color:#6b6b75;font-size:13px;margin-top:4px}
-select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 10px;font-size:15px;font-family:inherit;background:#fff}
 </style>
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#020817">
 </head>
@@ -109,23 +104,24 @@ select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margi
 </div>
 <div class="tabs" id="tabs">
 <button type="button" data-tab="orders" class="on">Orders</button>
+<button type="button" data-tab="profile">Profile</button>
+<button type="button" data-tab="sell">Sell Prompts</button>
 <button type="button" data-tab="prompts">My Prompts</button>
 <button type="button" data-tab="favorites">❤️ Favorites</button>
 <button type="button" data-tab="notifications">🔔 Notifications</button>
 <button type="button" data-tab="pro">🚀 Pro Hub</button>
-<button type="button" data-tab="sell">💼 Sell</button>
 <button type="button" data-tab="chat">Support chat</button>
 </div>
 
 <div id="pane-orders"><div id="ordersList"></div></div>
+<div id="pane-profile" hidden><div class="card"><h2>My Profile</h2><label>Full name</label><input id="profileName" maxlength="120"><label>Username</label><input id="profileUsername" maxlength="32" placeholder="Your public username"><label>Avatar URL</label><input id="profileAvatar" placeholder="https://..."><label>Bio</label><textarea id="profileBio" maxlength="1000"></textarea><label>Website</label><input id="profileWebsite" placeholder="https://..."><label>Binance Pay account / UID</label><input id="profilePayout" placeholder="Used only for seller payouts"><button class="btn" id="saveProfile" type="button">Save Profile</button><div id="profileMsg" class="msg"></div></div></div>
+<div id="pane-sell" hidden><div class="card"><h2>Sell Your Prompts</h2><p class="muted">Create your seller profile and submit prompts for administrator review. Your listings will not appear publicly until approved.</p><label>Store username</label><input id="sellUsername" maxlength="32" placeholder="e.g. creativehub"><label>Seller bio</label><textarea id="sellBio" maxlength="1000"></textarea><label>Website</label><input id="sellWebsite" placeholder="https://..."><label>Application message</label><textarea id="sellMessage" maxlength="2000" placeholder="Tell the admin about your prompts..."></textarea><button class="btn" id="applySeller" type="button">Apply to Become a Seller</button><div id="sellerMsg" class="msg"></div><p style="margin-top:12px"><a class="btn" href="seller.html">Open Seller Dashboard</a></p></div></div>
 
 <div id="pane-prompts" hidden><div id="promptsList"></div></div>
 
     <div id="pane-favorites" hidden><div id="favoritesList"></div></div>
     <div id="pane-notifications" hidden><div id="notificationsList"></div></div>
     <div id="pane-pro" hidden><div id="proHub"></div></div>
-    <div id="pane-sell" hidden><div id="sellHub"></div></div>
-
 
 <div id="pane-chat" hidden>
 <div class="card">
@@ -252,7 +248,7 @@ select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margi
     $('hello').textContent = 'Hi, ' + name;
     showView('dash');
     var h = location.hash.replace('#', '');
-    selectTab(['orders', 'prompts', 'favorites', 'notifications', 'pro', 'sell', 'chat'].indexOf(h) !== -1 ? h : 'orders');
+    selectTab(['orders', 'prompts', 'favorites', 'notifications', 'pro', 'chat', 'profile', 'sell'].indexOf(h) !== -1 ? h : 'orders');
     startPoll();
   }
 
@@ -261,13 +257,13 @@ select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margi
     document.querySelectorAll('#tabs button').forEach(function (b) {
       b.classList.toggle('on', b.dataset.tab === name);
     });
-    ['orders', 'prompts', 'favorites', 'notifications', 'pro', 'sell', 'chat'].forEach(function (t) { $('pane-' + t).hidden = t !== name; });
+    ['orders', 'prompts', 'favorites', 'notifications', 'pro', 'chat', 'profile', 'sell'].forEach(function (t) { $('pane-' + t).hidden = t !== name; });
     if (name === 'orders') loadOrders();
+    if (name === 'profile' || name === 'sell') loadProfilePanel();
     if (name === 'prompts') loadPrompts();
     if (name === 'favorites') loadFavorites();
     if (name === 'notifications') loadNotifications();
     if (name === 'pro') loadProHub();
-    if (name === 'sell') loadSellHub();
     if (name === 'chat') loadChat(true);
   }
   async function loadFavorites(){
@@ -292,295 +288,6 @@ select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margi
     $('proHub').innerHTML='<h2>🚀 PromptHub Pro Hub</h2><p class="muted">Your marketplace extras and quick tools.</p><div class="card"><b>🔗 Referral code</b><p style="margin:6px 0">'+code+'</p><button class="btn small" id="copyRef">Copy code</button></div><div class="card"><b>🏆 Badges</b><p style="margin:6px 0">'+(recent.length?'Explorer · Prompt Collector':'New Member · Start exploring')+'</p></div><div class="card"><b>🕐 Recently viewed</b><p style="margin:6px 0">'+(recent.length?recent.map(function(id){return '<a href="product.html?id='+id+'" style="text-decoration:underline;margin-right:8px">Prompt #'+id+'</a>'}).join(''):'No recent prompts yet.')+'</p></div>';
     var b=document.getElementById('copyRef');if(b)b.onclick=async function(){try{await navigator.clipboard.writeText(code);b.textContent='Copied ✓'}catch(e){}};
   }
-
-  /* ---------- sell (seller dashboard) ---------- */
-
-  var sellerProducts = [];
-  var sellerCommissionPercent = 10;
-  var editingProductId = null;
-
-  function becomeSellerForm(sp) {
-    return '<div class="card"><h2>💼 Become a Seller</h2>' +
-      '<p class="muted">List your own AI prompts and set your own prices. Buyers pay you directly — no admin approval needed to start.</p>' +
-      '<form id="becomeSellerForm">' +
-      '<label class="muted">Display name (shown to buyers)</label>' +
-      '<input name="disp" maxlength="80" placeholder="e.g. Ali\'s Prompts" value="' + esc(sp.seller_display_name || '') + '">' +
-      '<label class="muted">Payment method</label>' +
-      '<input name="method" maxlength="60" placeholder="e.g. Binance Pay" required value="' + esc(sp.seller_payment_method || '') + '">' +
-      '<label class="muted">Payment details (buyers send money here — e.g. your Binance UID)</label>' +
-      '<input name="details" maxlength="200" placeholder="e.g. Binance UID 123456789" required value="' + esc(sp.seller_payment_details || '') + '">' +
-      '<div class="muted" style="margin:4px 0 10px">Platform commission: <b>' + sellerCommissionPercent + '%</b> — you keep ' + (100 - sellerCommissionPercent) + '% of each sale (tracked for bookkeeping; you receive full payment directly, and pay the commission to the admin separately).</div>' +
-      '<button class="btn" style="width:100%">Start Selling</button>' +
-      '<div id="becomeSellerMsg" class="msg" role="status"></div>' +
-      '</form></div>';
-  }
-
-  function sellerInfoCard(sp) {
-    return '<div class="card"><div class="sp-row"><b>' + esc(sp.seller_display_name || 'Your seller profile') + '</b>' +
-      '<button class="btn small ghost" type="button" id="editSellerInfo">Edit payment info</button></div>' +
-      '<div class="muted" style="margin-top:6px">' + esc(sp.seller_payment_method || '') + ' — ' + esc(sp.seller_payment_details || '') + '</div>' +
-      '<div class="sp-stat">Platform commission: ' + sellerCommissionPercent + '% per sale (you keep ' + (100 - sellerCommissionPercent) + '%)</div>' +
-      '</div>';
-  }
-
-  function productFormCard() {
-    return '<div class="card" id="productFormCard" hidden>' +
-      '<h2 id="spFormTitle">Add Product</h2>' +
-      '<form id="sellProductForm">' +
-      '<input type="hidden" id="spId">' +
-      '<label class="muted">Name</label><input id="spName" maxlength="120" required>' +
-      '<label class="muted">Category</label><select id="spCat" required><option value="image">Image prompt</option><option value="video">Video prompt</option></select>' +
-      '<div class="seg" style="margin-top:4px"><button type="button" id="spPaidBtn" class="on">Paid</button><button type="button" id="spFreeBtn">Free</button></div>' +
-      '<input type="hidden" id="spFree" value="false">' +
-      '<label class="muted">Price</label><input id="spPrice" type="number" min="0.01" step="0.01" value="5">' +
-      '<label class="muted">Currency</label><input id="spCurrency" maxlength="8" value="USD">' +
-      '<label class="muted">Description</label><textarea id="spDesc" maxlength="600"></textarea>' +
-      '<label class="muted">Prompt text (the secret content buyers unlock)</label><textarea id="spPrompt" maxlength="8000" required style="min-height:120px"></textarea>' +
-      '<label class="muted">Add images</label><input id="spImages" type="file" accept="image/*" multiple>' +
-      '<label class="muted">Add videos</label><input id="spVideos" type="file" accept="video/*" multiple>' +
-      '<div id="spCurrentMedia" style="margin:6px 0"></div>' +
-      '<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:10px 0"><input type="checkbox" id="spActive" style="width:auto" checked> Active (visible in the store)</label>' +
-      '<button class="btn" style="width:100%">Save Product</button> ' +
-      '<button type="button" class="btn ghost" id="spCancel" style="width:100%;margin-top:8px">Cancel</button>' +
-      '<div id="spMsg" class="msg" role="status"></div>' +
-      '</form></div>';
-  }
-
-  function productRow(p) {
-    var free = !!p.is_free || Number(p.price) === 0;
-    return '<div class="card"><div class="sp-row"><b>' + esc(p.name) + '</b><span class="pill ' + (p.active ? 'paid' : 'cancelled') + '">' + (p.active ? 'Active' : 'Hidden') + '</span></div>' +
-      '<div class="muted">' + esc(p.category) + ' · ' + (free ? 'FREE' : esc(PH.money(p.price, p.currency))) + ' · ' + Number(p.sold_count || 0) + ' sold</div>' +
-      (Number(p.unpaid_commission || 0) > 0 ? '<div class="sp-stat">Commission owed to admin: ' + esc(PH.money(p.unpaid_commission, p.currency)) + '</div>' : '') +
-      '<div class="sp-actions">' +
-      '<button class="btn small" type="button" data-sp-edit="' + Number(p.id) + '">Edit</button>' +
-      '<button class="btn small ' + (p.active ? 'red' : 'green') + '" type="button" data-sp-toggle="' + Number(p.id) + '" data-active="' + (p.active ? '1' : '0') + '">' + (p.active ? 'Deactivate' : 'Activate') + '</button>' +
-      '<button class="btn small red" type="button" data-sp-delete="' + Number(p.id) + '">Delete</button>' +
-      '<a class="btn small ghost" href="product.html?id=' + Number(p.id) + '">View</a>' +
-      '</div></div>';
-  }
-
-  function saleRow(x) {
-    var o = x.orders || {};
-    var pending = x.status === 'pending';
-    return '<div class="card"><div class="sp-row"><b>' + esc((o.products && o.products.name) || 'Prompt') + '</b><span class="pill ' + (pending ? 'pending' : (x.status === 'approved' ? 'paid' : 'cancelled')) + '">' + esc(x.status) + '</span></div>' +
-      '<div class="muted">' + esc(PH.money(o.amount, o.currency)) + ' · ref: ' + esc(x.transaction_ref || '') + (x.note ? ' · ' + esc(x.note) : '') + '</div>' +
-      (pending ? '<div class="sp-actions"><button class="btn small green" type="button" data-sp-pay="approved" data-id="' + Number(x.id) + '">Approve (I received the payment)</button><button class="btn small red" type="button" data-sp-pay="rejected" data-id="' + Number(x.id) + '">Reject</button></div>' : '') +
-      '</div>';
-  }
-
-  async function loadSellHub() {
-    var el = $('sellHub');
-    el.innerHTML = '<div class="card muted">Loading…</div>';
-    var results = await Promise.all([
-      db.from('profiles').select('is_seller,seller_banned,seller_display_name,seller_payment_method,seller_payment_details').eq('id', me.id).maybeSingle(),
-      db.from('platform_settings').select('commission_percent').maybeSingle()
-    ]);
-    var pr = results[0], cs = results[1];
-    if (pr.error || !pr.data) { el.innerHTML = '<div class="card err">Seller system is not set up yet. Please run the marketplace SQL patch.</div>'; return; }
-    if (!cs.error && cs.data) sellerCommissionPercent = Number(cs.data.commission_percent);
-    var sp = pr.data;
-
-    if (sp.seller_banned) {
-      el.innerHTML = '<div class="card err"><b>Your seller account has been suspended.</b><p class="muted" style="margin-top:6px">Contact support if you think this is a mistake.</p></div>';
-      return;
-    }
-    if (!sp.is_seller) {
-      el.innerHTML = becomeSellerForm(sp);
-      return;
-    }
-
-    el.innerHTML = sellerInfoCard(sp) +
-      '<button class="btn" type="button" id="newProductBtn" style="margin-bottom:14px">+ Add New Product</button>' +
-      productFormCard() +
-      '<h2 style="margin:18px 0 8px">My Products</h2><div id="sellProductsList"><div class="card muted">Loading…</div></div>' +
-      '<h2 style="margin:18px 0 8px">My Sales</h2><div id="sellSalesList"><div class="card muted">Loading…</div></div>';
-
-    loadSellerProducts();
-    loadSellerSales();
-  }
-
-  async function loadSellerProducts() {
-    var list = $('sellProductsList');
-    var r = await db.rpc('get_seller_products');
-    if (r.error) { list.innerHTML = '<div class="card err">' + esc(r.error.message) + '</div>'; return; }
-    sellerProducts = r.data || [];
-    list.innerHTML = sellerProducts.map(productRow).join('') || '<div class="card muted">No products yet. Add your first one above.</div>';
-  }
-
-  async function loadSellerSales() {
-    var list = $('sellSalesList');
-    var r = await db.from('payment_submissions')
-      .select('id,method,transaction_ref,note,status,created_at,orders(amount,currency,products(name))')
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (r.error) { list.innerHTML = '<div class="card err">' + esc(r.error.message) + '</div>'; return; }
-    var rows = (r.data || []).filter(function (x) { return x.orders; });
-    list.innerHTML = rows.map(saleRow).join('') || '<div class="card muted">No sales yet.</div>';
-  }
-
-  $('sellHub').addEventListener('submit', async function (e) {
-    if (e.target.id === 'becomeSellerForm') {
-      e.preventDefault();
-      var f = e.target;
-      var msg = $('becomeSellerMsg');
-      setMsg(msg, 'Saving…');
-      var btn = f.querySelector('button');
-      btn.disabled = true;
-      var r = await db.rpc('become_seller', {
-        p_display_name: f.elements.disp.value.trim(),
-        p_payment_method: f.elements.method.value.trim(),
-        p_payment_details: f.elements.details.value.trim()
-      });
-      btn.disabled = false;
-      if (r.error) { setMsg(msg, r.error.message, 'err'); return; }
-      loadSellHub();
-      return;
-    }
-    if (e.target.id === 'sellProductForm') {
-      e.preventDefault();
-      var pm = $('spMsg');
-      var saveBtn = e.target.querySelector('button.btn');
-      saveBtn.disabled = true;
-      setMsg(pm, 'Saving…');
-      try {
-        var idVal = $('spId').value;
-        var r2 = await db.rpc('seller_save_product', {
-          p_id: idVal ? Number(idVal) : null,
-          p_name: $('spName').value.trim(),
-          p_category: $('spCat').value,
-          p_price: Number($('spPrice').value),
-          p_currency: $('spCurrency').value.trim().toUpperCase(),
-          p_is_free: $('spFree').value === 'true',
-          p_description: $('spDesc').value.trim(),
-          p_prompt: $('spPrompt').value,
-          p_active: $('spActive').checked
-        });
-        if (r2.error) { setMsg(pm, r2.error.message, 'err'); return; }
-        var productId = Number(r2.data);
-        var imageFiles = Array.prototype.slice.call(($('spImages') || {}).files || []);
-        var videoFiles = Array.prototype.slice.call(($('spVideos') || {}).files || []);
-        var allFiles = imageFiles.map(function (f) { return { file: f, kind: 'image' }; }).concat(videoFiles.map(function (f) { return { file: f, kind: 'video' }; }));
-        var nextOrder = 100;
-        for (var i = 0; i < allFiles.length; i++) {
-          setMsg(pm, 'Uploading media ' + (i + 1) + ' of ' + allFiles.length + '…');
-          var item = allFiles[i];
-          var max = item.kind === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
-          if (item.file.size > max) throw new Error((item.kind === 'image' ? 'Image' : 'Video') + ' "' + item.file.name + '" is too large.');
-          var ext = (item.file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
-          var rid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2));
-          var path = 'products/' + rid + '-' + item.kind + '.' + ext;
-          var up = await db.storage.from('product-media').upload(path, item.file, { cacheControl: '3600', upsert: false, contentType: item.file.type || undefined });
-          if (up.error) throw new Error('Could not upload ' + item.kind + ': ' + up.error.message);
-          var pub = db.storage.from('product-media').getPublicUrl(path).data.publicUrl;
-          var ins = await db.from('product_media').insert({ product_id: productId, media_type: item.kind, media_url: pub, storage_path: path, sort_order: nextOrder++ });
-          if (ins.error) throw new Error('Could not save ' + item.kind + ' to gallery: ' + ins.error.message);
-        }
-        setMsg(pm, 'Saved ✓', 'ok');
-        $('productFormCard').hidden = true;
-        e.target.reset();
-        editingProductId = null;
-        loadSellerProducts();
-      } catch (err) {
-        setMsg(pm, err && err.message ? err.message : String(err), 'err');
-      } finally {
-        saveBtn.disabled = false;
-      }
-      return;
-    }
-  });
-
-  $('sellHub').addEventListener('click', async function (e) {
-    if (e.target.id === 'editSellerInfo') {
-      var p = await db.from('profiles').select('seller_display_name,seller_payment_method,seller_payment_details').eq('id', me.id).maybeSingle();
-      $('sellHub').innerHTML = becomeSellerForm(p.data || {}) + '<p class="muted" style="text-align:center"><button type="button" class="link" id="spBackToDash">← Back to seller dashboard</button></p>';
-      $('sellHub').querySelector('#spBackToDash').onclick = loadSellHub;
-      return;
-    }
-    if (e.target.id === 'newProductBtn') {
-      editingProductId = null;
-      $('spFormTitle').textContent = 'Add Product';
-      $('sellProductForm').reset();
-      $('spId').value = '';
-      $('spCat').value = 'image';
-      $('spCurrency').value = 'USD';
-      $('spCurrentMedia').innerHTML = '';
-      setPricingModeSell('paid');
-      $('productFormCard').hidden = false;
-      $('productFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    if (e.target.id === 'spCancel') {
-      $('productFormCard').hidden = true;
-      editingProductId = null;
-      return;
-    }
-    if (e.target.id === 'spFreeBtn') { setPricingModeSell('free'); return; }
-    if (e.target.id === 'spPaidBtn') { setPricingModeSell('paid'); return; }
-
-    var editBtn = e.target.closest('[data-sp-edit]');
-    if (editBtn) {
-      var id = Number(editBtn.dataset.spEdit);
-      var pr = sellerProducts.filter(function (x) { return Number(x.id) === id; })[0];
-      if (!pr) return;
-      var promptR = await db.rpc('get_seller_prompt', { p_product_id: id });
-      var mediaR = await db.from('product_media').select('id,media_type,media_url,storage_path').eq('product_id', id).order('sort_order');
-      editingProductId = id;
-      $('spFormTitle').textContent = 'Edit Product #' + id;
-      $('spId').value = id;
-      $('spName').value = pr.name;
-      $('spCat').value = pr.category;
-      $('spPrice').value = pr.price;
-      $('spCurrency').value = pr.currency;
-      setPricingModeSell(pr.is_free || Number(pr.price) === 0 ? 'free' : 'paid');
-      $('spDesc').value = '';
-      $('spPrompt').value = promptR.error ? '' : (promptR.data || '');
-      $('spImages').value = ''; $('spVideos').value = '';
-      var mm = (mediaR.data || []);
-      $('spCurrentMedia').innerHTML = mm.length ? ('<div class="muted">' + mm.length + ' existing media item(s). Uploading new files here adds to the gallery.</div>') : '';
-      $('spActive').checked = !!pr.active;
-      $('productFormCard').hidden = false;
-      $('productFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    var toggleBtn = e.target.closest('[data-sp-toggle]');
-    if (toggleBtn) {
-      toggleBtn.disabled = true;
-      var r = await db.rpc('seller_set_product_active', { p_id: Number(toggleBtn.dataset.spToggle), p_active: toggleBtn.dataset.active !== '1' });
-      if (r.error) alert(r.error.message);
-      loadSellerProducts();
-      return;
-    }
-    var delBtn = e.target.closest('[data-sp-delete]');
-    if (delBtn) {
-      if (!confirm('Delete this product? This cannot be undone.')) return;
-      delBtn.disabled = true;
-      var r2 = await db.rpc('seller_delete_product', { p_id: Number(delBtn.dataset.spDelete) });
-      if (r2.error) { alert(r2.error.message); delBtn.disabled = false; return; }
-      loadSellerProducts();
-      return;
-    }
-    var payBtn = e.target.closest('[data-sp-pay]');
-    if (payBtn) {
-      var status = payBtn.dataset.spPay;
-      if (!confirm((status === 'approved' ? 'Confirm you received this payment?' : 'Reject this payment?'))) return;
-      payBtn.disabled = true;
-      var r3 = await db.rpc('seller_review_payment', { p_id: Number(payBtn.dataset.id), p_status: status });
-      if (r3.error) alert(r3.error.message);
-      loadSellerSales();
-      loadSellerProducts();
-      return;
-    }
-  });
-
-  function setPricingModeSell(mode) {
-    var free = mode === 'free';
-    $('spFree').value = free ? 'true' : 'false';
-    $('spFreeBtn').className = free ? 'on' : '';
-    $('spPaidBtn').className = free ? '' : 'on';
-    $('spPrice').disabled = free;
-    if (free) $('spPrice').value = '0'; else if (!Number($('spPrice').value)) $('spPrice').value = '5';
-  }
-
   $('tabs').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-tab]');
     if (b) { history.replaceState(null, '', '#' + b.dataset.tab); selectTab(b.dataset.tab); }
@@ -589,14 +296,14 @@ select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margi
   /* ---------- orders ---------- */
 
   function payForm(o) {
-    var sellerBox = o.seller_payment_snapshot
-      ? '<div class="binance-pay-box"><b>💳 Pay the seller directly</b><div class="muted" style="margin-top:5px">' + esc(o.seller_payment_snapshot) + '</div></div>'
-      : '<div class="binance-pay-box"><b>Binance Pay</b><div class="muted" style="margin-top:5px">UID: 984200359</div>' +
-        '<img src="assets/binance-qr.jpg" alt="Binance Pay QR code" style="display:block;width:min(280px,100%);height:auto;margin:14px auto 8px;border-radius:12px;border:1px solid #e4e4eb">' +
-        '<div class="muted" style="text-align:center">Scan the QR code to pay.</div></div>';
     return '<form class="payform" data-order="' + Number(o.id) + '">' +
       '<div class="instr">' + esc(PH.CONFIG.paymentInstructions) + '</div>' +
-      sellerBox +
+      '<div class="binance-pay-box">' +
+      '<b>Binance Pay</b>' +
+      '<div class="muted" style="margin-top:5px">UID: 984200359</div>' +
+      '<img src="assets/binance-qr.jpg" alt="Binance Pay QR code" style="display:block;width:min(280px,100%);height:auto;margin:14px auto 8px;border-radius:12px;border:1px solid #e4e4eb">' +
+      '<div class="muted" style="text-align:center">Scan the QR code to pay.</div>' +
+      '</div>' +
       '<input name="pay_method" value="Binance Pay" maxlength="60" required>' +
       '<input name="pay_ref" placeholder="Transaction ID / reference" minlength="3" maxlength="120" required>' +
       '<textarea name="pay_note" placeholder="Note (optional)" maxlength="500"></textarea>' +
@@ -629,7 +336,7 @@ select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margi
     var el = $('ordersList');
     el.innerHTML = '<div class="card muted">Loading…</div>';
     var r = await db.from('orders')
-      .select('id,amount,currency,status,created_at,seller_payment_snapshot,products(name,is_free),payment_submissions(id,status)')
+      .select('id,amount,currency,status,created_at,products(name,is_free),payment_submissions(id,status)')
       .order('created_at', { ascending: false });
     if (r.error) { el.innerHTML = '<div class="card err">' + esc(r.error.message) + '</div>'; return; }
     if (!r.data.length) {
@@ -691,6 +398,18 @@ select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margi
     b.textContent = ok ? 'Copied ✓' : 'Copy failed';
     setTimeout(function () { b.textContent = 'Copy'; }, 1800);
   });
+
+  async function loadProfilePanel() {
+    var r = await db.from('profiles').select('full_name,username,avatar_url,bio,website_url,payout_account,seller_status').eq('id', me.id).maybeSingle();
+    if (r.error || !r.data) return;
+    $('profileName').value=r.data.full_name||''; $('profileUsername').value=r.data.username||''; $('profileAvatar').value=r.data.avatar_url||''; $('profileBio').value=r.data.bio||''; $('profileWebsite').value=r.data.website_url||''; $('profilePayout').value=r.data.payout_account||'';
+    $('sellUsername').value=r.data.username||''; $('sellBio').value=r.data.bio||''; $('sellWebsite').value=r.data.website_url||'';
+    if (r.data.seller_status==='approved') $('sellerMsg').textContent='Seller approved. Use the Seller Dashboard to manage your store.';
+    else if (r.data.seller_status==='pending') $('sellerMsg').textContent='Seller application is pending admin review.';
+    else if (r.data.seller_status==='rejected') $('sellerMsg').textContent='Seller application was rejected. You may submit an updated application.';
+  }
+  $('saveProfile').addEventListener('click', async function(){ var r=await db.from('profiles').update({full_name:$('profileName').value.trim(),username:$('profileUsername').value.trim()||null,avatar_url:$('profileAvatar').value.trim()||null,bio:$('profileBio').value,website_url:$('profileWebsite').value.trim(),payout_account:$('profilePayout').value.trim()}).eq('id',me.id); setMsg($('profileMsg'),r.error?r.error.message:'Profile saved ✓',r.error?'err':'ok'); });
+  $('applySeller').addEventListener('click', async function(){ var r=await db.rpc('apply_as_seller',{p_username:$('sellUsername').value.trim(),p_bio:$('sellBio').value,p_message:$('sellMessage').value,p_website_url:$('sellWebsite').value.trim()}); setMsg($('sellerMsg'),r.error?r.error.message:'Application submitted ✓ Waiting for admin review.',r.error?'err':'ok'); });
 
   /* ---------- chat ---------- */
 

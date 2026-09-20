@@ -71,7 +71,8 @@ button:disabled{opacity:.6;cursor:wait}
 <button class="tab" type="button" data-p="payments">💳 Payments</button>
 <button class="tab" type="button" data-p="products">📦 Products</button>
 <button class="tab" type="button" data-p="reviews">⭐ Reviews</button>
-<button class="tab" type="button" data-p="sellers">🧑‍💼 Sellers</button>
+<button class="tab" type="button" data-p="sellers">🛍️ Sellers</button>
+<button class="tab" type="button" data-p="marketplace">⚙️ Marketplace</button>
 </div>
 
 <section id="dash">
@@ -120,18 +121,8 @@ button:disabled{opacity:.6;cursor:wait}
 
 <section id="reviews" class="hidden"><div class="card"><h2>⭐ Review Moderation</h2><p style="font-size:13px;color:#666">Approve or hide customer reviews.</p><div class="table"><table><thead><tr><th>Date</th><th>Product</th><th>Rating</th><th>Review</th><th>Status</th><th>Action</th></tr></thead><tbody id="rb"></tbody></table></div></div></section>
 
-<section id="sellers" class="hidden">
-<div class="card"><h2>🧑‍💼 Marketplace Sellers</h2>
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-<label style="font-size:13px;color:#666">Platform commission (%)</label>
-<input id="commissionInput" type="number" min="0" max="100" step="0.1" style="width:100px">
-<button class="blue" type="button" id="commissionSave">Save</button>
-<span id="commissionMsg" style="font-size:13px"></span>
-</div>
-<div class="table"><table><thead><tr><th>Seller</th><th>Payment info</th><th>Products</th><th>Unpaid commission</th><th>Status</th><th>Action</th></tr></thead><tbody id="sellersBody"></tbody></table></div>
-</div>
-</section>
-
+<section id="sellers" class="hidden"><div class="card"><h2>Seller Applications</h2><p class="small">Approve or reject seller accounts. Approved sellers get their own Seller Dashboard.</p><div class="table"><table><thead><tr><th>User</th><th>Username</th><th>Status</th><th>Applied</th><th>Action</th></tr></thead><tbody id="sb"></tbody></table></div></div><div class="card"><h2>Seller Products Awaiting Review</h2><div class="table"><table><thead><tr><th>Product</th><th>Seller</th><th>Price</th><th>Submitted</th><th>Action</th></tr></thead><tbody id="spb"></tbody></table></div></div><div class="card"><h2>Seller Payout Requests</h2><div class="table"><table><thead><tr><th>ID</th><th>Seller</th><th>Amount</th><th>Destination</th><th>Status</th><th>Action</th></tr></thead><tbody id="payoutb"></tbody></table></div></div></section>
+<section id="marketplace" class="hidden"><div class="card form"><h2>Marketplace Settings</h2><label>Platform commission (%)</label><input id="mc" type="number" min="0" max="100" step="0.01"><label>Minimum seller price</label><input id="mmin" type="number" min="0" step="0.01"><label>Maximum seller price</label><input id="mmax" type="number" min="1" step="0.01"><label class="check"><input id="mauto" type="checkbox"> Auto-approve seller accounts</label><button class="blue" id="msave" type="button">Save Marketplace Settings</button><div id="mmsg" class="small"></div></div></section>
 <section id="products" class="hidden">
 <div class="card form">
 <h2 id="formTitle">Add Product</h2>
@@ -280,13 +271,28 @@ button:disabled{opacity:.6;cursor:wait}
     currentPane = b.dataset.p;
     clearError();
     document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('active', x === b); });
-    ['dash', 'customers', 'chats', 'payments', 'products', 'reviews', 'sellers'].forEach(function (id) {
+    ['dash', 'customers', 'chats', 'payments', 'products', 'reviews', 'sellers', 'marketplace'].forEach(function (id) {
       $(id).classList.toggle('hidden', id !== currentPane);
     });
     if (currentPane === 'chats') chatPeople();
     if (currentPane === 'reviews') loadReviews();
-    if (currentPane === 'sellers') loadSellers();
+    if (currentPane === 'sellers') loadSellerAdmin();
+    if (currentPane === 'marketplace') loadMarketplaceSettings();
   });
+
+  async function loadSellerAdmin(){
+    var a=await db.from('seller_applications').select('id,user_id,status,message,created_at,profiles(full_name,username)').order('created_at',{ascending:false});
+    $('sb').innerHTML=a.error?'<tr><td colspan="5" class="bad">'+esc(a.error.message)+'</td></tr>':(a.data||[]).map(function(x){return '<tr><td>'+esc(x.profiles&&x.profiles.full_name||x.user_id)+'</td><td>@'+esc(x.profiles&&x.profiles.username||'-')+'</td><td>'+esc(x.status)+'</td><td>'+esc(new Date(x.created_at).toLocaleString())+'</td><td>'+(x.status==='pending'?'<button class="green" data-seller="approved" data-id="'+esc(x.user_id)+'">Approve</button> <button class="red" data-seller="rejected" data-id="'+esc(x.user_id)+'">Reject</button>':'-')+'</td></tr>'}).join('')||'<tr><td colspan="5">No seller applications.</td></tr>';
+    var q=await db.from('products').select('id,name,price,currency,submitted_at,rejection_reason,profiles(full_name,username)').not('seller_id','is',null).eq('approval_status','pending').order('submitted_at',{ascending:false});
+    $('spb').innerHTML=q.error?'<tr><td colspan="5" class="bad">'+esc(q.error.message)+'</td></tr>':(q.data||[]).map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+esc(x.profiles&&x.profiles.username||x.profiles&&x.profiles.full_name||'-')+'</td><td>'+esc(PH.money(x.price,x.currency))+'</td><td>'+esc(x.submitted_at?new Date(x.submitted_at).toLocaleString():'-')+'</td><td><button class="green" data-product-review="1" data-id="'+Number(x.id)+'">Approve</button> <button class="red" data-product-review="0" data-id="'+Number(x.id)+'">Reject</button></td></tr>'}).join('')||'<tr><td colspan="5">No products waiting for review.</td></tr>';
+    var pr=await db.from('seller_payouts').select('id,seller_id,amount,currency,destination,status,profiles(full_name,username)').order('created_at',{ascending:false});
+    $('payoutb').innerHTML=pr.error?'<tr><td colspan="6" class="bad">'+esc(pr.error.message)+'</td></tr>':(pr.data||[]).map(function(x){var action=x.status==='requested'?'<button class="green" data-payout="approved" data-id="'+Number(x.id)+'">Approve</button> <button class="red" data-payout="rejected" data-id="'+Number(x.id)+'">Reject</button>':x.status==='approved'?'<button class="green" data-payout="paid" data-id="'+Number(x.id)+'">Mark Paid</button>':'-';return '<tr><td>#'+Number(x.id)+'</td><td>'+esc(x.profiles&&x.profiles.username||x.profiles&&x.profiles.full_name||'-')+'</td><td>'+esc(PH.money(x.amount,x.currency))+'</td><td class="wrapcell">'+esc(x.destination)+'</td><td>'+esc(x.status)+'</td><td>'+action+'</td></tr>'}).join('')||'<tr><td colspan="6">No payout requests.</td></tr>';
+  }
+  $('sb').addEventListener('click',async function(e){var b=e.target.closest('[data-seller]');if(!b)return;var r=await db.rpc('admin_set_seller_status',{p_user_id:b.dataset.id,p_status:b.dataset.seller,p_note:b.dataset.seller==='rejected'?'Application rejected by admin.':''});if(r.error)showError('Seller error',r.error.message);await loadSellerAdmin();});
+  $('spb').addEventListener('click',async function(e){var b=e.target.closest('[data-product-review]');if(!b)return;var r=await db.rpc('admin_review_seller_product',{p_id:Number(b.dataset.id),p_approved:b.dataset.productReview==='1',p_note:b.dataset.productReview==='0'?'Product rejected by admin.':''});if(r.error)showError('Product review error',r.error.message);await loadSellerAdmin();await refreshStats();});
+  $('payoutb').addEventListener('click',async function(e){var b=e.target.closest('[data-payout]');if(!b)return;var r=await db.from('seller_payouts').update({status:b.dataset.payout,reviewed_at:new Date().toISOString(),reviewed_by:me.id,paid_at:b.dataset.payout==='paid'?new Date().toISOString():null}).eq('id',Number(b.dataset.id));if(r.error)showError('Payout error',r.error.message);await loadSellerAdmin();});
+  async function loadMarketplaceSettings(){var r=await db.from('marketplace_settings').select('commission_percent,min_price,max_price,seller_auto_approve').eq('id',true).maybeSingle();if(r.error||!r.data)return;$('mc').value=r.data.commission_percent;$('mmin').value=r.data.min_price;$('mmax').value=r.data.max_price;$('mauto').checked=!!r.data.seller_auto_approve;}
+  $('msave').addEventListener('click',async function(){var r=await db.rpc('admin_update_marketplace_settings',{p_commission:Number($('mc').value),p_min_price:Number($('mmin').value),p_max_price:Number($('mmax').value),p_auto_approve:$('mauto').checked});$('mmsg').textContent=r.error?r.error.message:'Settings saved ✓';});
 
   /* ---------- data loading ---------- */
 
@@ -471,13 +477,13 @@ button:disabled{opacity:.6;cursor:wait}
   }
 
   async function loadProducts() {
-    var r = await db.from('products').select('id,name,category,price,currency,is_free,active,featured,seller_id').in('category', ['image','video']).order('id', { ascending: false });
+    var r = await db.from('products').select('id,name,category,price,currency,is_free,active,featured').in('category', ['image','video']).order('id', { ascending: false });
     $('xb').innerHTML = r.error
       ? '<tr><td colspan="5" class="bad">' + esc(r.error.message) + '</td></tr>'
       : (r.data || []).map(function (x) {
           var id = Number(x.id);
           var cat = (PH.CATEGORIES[x.category] || {}).label || x.category;
-          return '<tr><td>' + esc(x.name) + (x.seller_id ? ' <span class="wrapcell" style="font-size:11px;color:#888">(seller-owned)</span>' : '') + '</td><td>' + esc(cat) + '</td><td>' + esc(PH.money(x.price, x.currency)) +
+          return '<tr><td>' + esc(x.name) + '</td><td>' + esc(cat) + '</td><td>' + esc(PH.money(x.price, x.currency)) +
             '</td><td>' + (x.active ? '<span class="ok">Yes</span>' : '<span class="bad">No</span>') + '</td><td>' +
             '<button class="gray" type="button" data-edit="' + id + '">Edit</button> ' +
             '<button class="' + (x.active ? 'red' : 'green') + '" type="button" data-toggle="' + id + '" data-active="' + (x.active ? '1' : '0') + '">' +
@@ -632,47 +638,7 @@ async function refreshProStats(){
     $('rb').innerHTML=r.error?'<tr><td colspan="6" class="bad">'+esc(r.error.message)+'</td></tr>':(r.data||[]).map(function(x){return '<tr><td>'+new Date(x.created_at).toLocaleString()+'</td><td>'+esc(x.products&&x.products.name||'-')+'</td><td>'+('★'.repeat(Number(x.rating)))+'</td><td class="wrapcell">'+esc(x.review)+'</td><td>'+ (x.approved?'<span class="ok">Approved</span>':'<span class="bad">Hidden</span>')+'</td><td><button class="'+(x.approved?'red':'green')+'" type="button" data-review="'+Number(x.id)+'" data-approved="'+(x.approved?'1':'0')+'">'+(x.approved?'Hide':'Approve')+'</button></td></tr>'}).join('')||'<tr><td colspan="6">No reviews.</td></tr>';
   }
   $('rb').addEventListener('click',async function(e){var b=e.target.closest('[data-review]');if(!b)return;b.disabled=true;var r=await db.rpc('admin_review_product',{p_review_id:Number(b.dataset.review),p_approved:b.dataset.approved!=='1'});if(r.error)showError('Could not update review',r.error.message);await loadReviews();await refreshProStats();});
-
-  /* ---------- sellers ---------- */
-
-  function sellerRow(x) {
-    var id = esc(x.user_id);
-    return '<tr><td>' + esc(x.display_name || 'Seller') + '</td>' +
-      '<td class="wrapcell">' + esc(x.payment_method || '') + ' — ' + esc(x.payment_details || '') + '</td>' +
-      '<td>' + Number(x.product_count || 0) + '</td>' +
-      '<td>' + (Number(x.unpaid_commission || 0) > 0 ? '<span class="bad">' + Number(x.unpaid_commission).toFixed(2) + '</span>' : '0.00') + '</td>' +
-      '<td>' + (x.banned ? '<span class="bad">Banned</span>' : '<span class="ok">Active</span>') + '</td>' +
-      '<td><button class="' + (x.banned ? 'green' : 'red') + '" type="button" data-seller-ban="' + id + '" data-banned="' + (x.banned ? '1' : '0') + '">' + (x.banned ? 'Unban' : 'Ban') + '</button></td></tr>';
-  }
-
-  async function loadSellers() {
-    var cs = await db.from('platform_settings').select('commission_percent').maybeSingle();
-    if (!cs.error && cs.data) $('commissionInput').value = cs.data.commission_percent;
-    var r = await db.rpc('admin_list_sellers');
-    $('sellersBody').innerHTML = r.error
-      ? '<tr><td colspan="6" class="bad">' + esc(r.error.message) + '</td></tr>'
-      : (r.data || []).map(sellerRow).join('') || '<tr><td colspan="6">No sellers yet.</td></tr>';
-  }
-
-  $('commissionSave').addEventListener('click', async function () {
-    var msg = $('commissionMsg');
-    msg.textContent = 'Saving…'; msg.className = '';
-    var r = await db.rpc('admin_set_commission_percent', { p_percent: Number($('commissionInput').value) });
-    if (r.error) { msg.textContent = r.error.message; msg.className = 'bad'; return; }
-    msg.textContent = 'Saved ✓'; msg.className = 'ok';
-  });
-
-  $('sellersBody').addEventListener('click', async function (e) {
-    var b = e.target.closest('[data-seller-ban]');
-    if (!b) return;
-    var banned = b.dataset.banned !== '1';
-    if (!confirm((banned ? 'Ban' : 'Unban') + ' this seller? ' + (banned ? 'Their products will be hidden immediately.' : ''))) return;
-    b.disabled = true;
-    var r = await db.rpc('admin_set_seller_banned', { p_user_id: b.dataset.sellerBan, p_banned: banned });
-    if (r.error) showError('Could not update seller', r.error.message);
-    await loadSellers();
-  });
-
+  
   /* ---------- chats ---------- */
 
   async function chatPeople() {

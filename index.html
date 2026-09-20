@@ -191,8 +191,8 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
     <a class="side-link" href="#paidSection"><span class="side-icon">♛</span><span>Paid Prompts</span></a>
     
     <div class="side-sep"></div>
-    <a class="side-link" href="account.html#sell"><span class="side-icon">💼</span><span>Sell your prompts</span></a>
     <a class="side-link" href="account.html"><span class="side-icon">♙</span><span>Account</span></a>
+    <a class="side-link" href="account.html?next=seller.html"><span class="side-icon">＋</span><span>Sell Prompts</span></a>
   </nav>
   <div class="binance-box">
     <div class="binance-top">
@@ -323,8 +323,7 @@ function galleryMarkup(p){
 function card(p){
  var isFree=!!p.is_free || Number(p.price)===0;
  var cat=p.category==='image'?'AI Images':'AI Video';
- var sellerLine=p._sellerName?'<div class="mini-meta" style="margin-top:-4px">🧑‍💻 '+esc(p._sellerName)+'</div>':'';
- return '<article class="card"><button class="favorite-btn '+(isFavorite(p.id)?'on':'')+'" data-fav="'+Number(p.id)+'" aria-label="Favorite">'+(isFavorite(p.id)?'♥':'♡')+'</button>'+galleryMarkup(p)+(p.featured?'<span class="featured-badge">★ Featured</span>':'')+'<div class="category">'+(p.category==='video'?'▶':'▣')+' '+esc(cat)+'</div><h3>'+esc(p.name)+'</h3>'+sellerLine+'<p>'+esc(p.description||'')+'</p><div class="mini-meta">👁 '+Number(p.views||0)+' views · ★ '+Number(p.rating||0).toFixed(1)+'</div><div class="card-bottom"><span class="price '+(isFree?'free-price':'')+'">'+(isFree?'Free':esc(money(p.price,p.currency)))+'</span><a class="view-btn" href="product.html?id='+Number(p.id)+'">View Prompt →</a></div></article>';
+ return '<article class="card"><button class="favorite-btn '+(isFavorite(p.id)?'on':'')+'" data-fav="'+Number(p.id)+'" aria-label="Favorite">'+(isFavorite(p.id)?'♥':'♡')+'</button>'+galleryMarkup(p)+(p.featured?'<span class="featured-badge">★ Featured</span>':'')+'<div class="category">'+(p.category==='video'?'▶':'▣')+' '+esc(cat)+'</div><h3>'+esc(p.name)+'</h3><p>'+esc(p.description||'')+'</p><div class="mini-meta">👁 '+Number(p.views||0)+' views · ★ '+Number(p.rating||0).toFixed(1)+'</div><div class="card-bottom"><span class="price '+(isFree?'free-price':'')+'">'+(isFree?'Free':esc(money(p.price,p.currency)))+'</span><a class="view-btn" href="product.html?id='+Number(p.id)+'">View Prompt →</a></div></article>';
 }
 function initGalleries(){
  document.querySelectorAll('.gallery').forEach(function(g){
@@ -385,7 +384,7 @@ $('topSearch').addEventListener('input',function(){setSearch(this.value)});
 $('heroSearchBtn').addEventListener('click',function(){setSearch($('heroSearch').value)});
 $('copyUid').addEventListener('click',function(){navigator.clipboard&&navigator.clipboard.writeText('984200359').then(function(){$('copyUid').textContent='Copied';setTimeout(function(){$('copyUid').textContent='Copy'},1200)}).catch(function(){})});
 async function load(){
- var url=SUPABASE_URL+'/rest/v1/products?select=id,name,category,description,price,currency,is_free,image_url,video_url,featured,seller_id&active=eq.true&order=id.asc';
+ var url=SUPABASE_URL+'/rest/v1/products?select=id,name,category,description,price,currency,is_free,image_url,video_url,featured&active=eq.true&order=id.asc';
  try{
   var r=await fetch(url,{headers:{apikey:SUPABASE_KEY,Accept:'application/json'},cache:'no-store'});
   var body=await r.text();if(!r.ok)throw new Error('HTTP '+r.status);
@@ -401,18 +400,6 @@ async function load(){
      var statsMap={};
      statsRows.forEach(function(s){statsMap[Number(s.product_id)]={views:Number(s.views_count||0),rating:Number(s.avg_rating||0)};});
      products.forEach(function(p){var s=statsMap[Number(p.id)];p.views=s?s.views:0;p.rating=s?s.rating:0;});
-    }
-   }catch(e){}
-  }
-  var sellerIds=Array.from(new Set(products.map(function(p){return p.seller_id}).filter(Boolean)));
-  if(sellerIds.length){
-   try{
-    var slr=await fetch(SUPABASE_URL+'/rest/v1/sellers_public?select=id,seller_display_name&id=in.('+sellerIds.join(',')+')',{headers:{apikey:SUPABASE_KEY,Accept:'application/json'},cache:'no-store'});
-    if(slr.ok){
-     var sellerRows=await slr.json();
-     var sellerMap={};
-     sellerRows.forEach(function(s){sellerMap[s.id]=s.seller_display_name;});
-     products.forEach(function(p){if(p.seller_id&&sellerMap[p.seller_id])p._sellerName=sellerMap[p.seller_id];});
     }
    }catch(e){}
   }
