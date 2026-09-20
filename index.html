@@ -2,271 +2,257 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="PromptHub - premium AI prompts for images and video.">
-<title>PromptHub — Premium AI Prompts</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="PromptHub — premium AI prompts for images and video.">
+<title>PromptHub — AI Prompt Marketplace</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
-body{font-family:Arial,sans-serif;background:#f7f7fb;color:#17171c;line-height:1.5}
+:root{
+  --bg:#020817;--panel:#07142b;--panel2:#0a1b38;--line:#173968;
+  --text:#f7f9ff;--muted:#aab8d0;--blue:#3d7cff;--purple:#8b45ff;
+  --cyan:#24d8ff;--green:#21e6a1;--shadow:0 20px 60px rgba(0,0,0,.32)
+}
+html{scroll-behavior:smooth}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:
+radial-gradient(circle at 75% 0%,rgba(67,67,255,.12),transparent 28%),var(--bg);color:var(--text);line-height:1.5}
 a{text-decoration:none;color:inherit}
-.nav{background:#fff;border-bottom:1px solid #e9e9ef;position:sticky;top:0;z-index:10}
-.nav-inner{max-width:1150px;margin:auto;padding:16px 20px;display:flex;align-items:center;gap:24px}
-.logo{font-size:22px;font-weight:800;margin-right:auto}.logo span{font-weight:400}
-.nav-link{font-size:14px;color:#555}
-.btn{border:0;border-radius:10px;padding:11px 17px;background:#17171c;color:#fff;font-weight:700;cursor:pointer;display:inline-block;font-size:inherit;font-family:inherit}
-.hero{margin:35px max(20px,calc((100% - 1150px)/2)) 20px;padding:55px 25px;text-align:center;background:#17171c;color:#fff;border-radius:24px}
-.tag{display:inline-block;padding:7px 12px;border-radius:99px;background:#303038;font-size:12px;margin-bottom:18px}
-.hero h1{font-size:clamp(35px,7vw,62px);line-height:1.03;margin-bottom:16px}
-.hero p{max-width:650px;margin:0 auto 25px;color:#cfcfd7;font-size:17px}
-.search{max-width:620px;margin:auto;display:flex;background:#fff;padding:6px;border-radius:13px}
-.search input{flex:1;min-width:0;border:0;outline:0;padding:12px;font-size:15px;border-radius:9px}.search .btn{margin-left:5px}
-.section{max-width:1150px;margin:32px auto;padding:0 20px}
-.section-head{margin-bottom:17px}.section-head h2{font-size:25px}.muted{color:#6b6b75;font-size:14px}
-.cats{display:flex;gap:10px;overflow:auto;padding-bottom:5px}
-.cat{white-space:nowrap;background:#fff;border:1px solid #e7e7ed;padding:10px 15px;border-radius:99px;font-size:14px;cursor:pointer;font-family:inherit;color:inherit}
-.cat.active{background:#17171c;color:#fff}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.prompt-list{margin-top:18px}.list-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:28px 0 14px}.list-title h3{font-size:22px}.free-title{color:#177245}.paid-title{color:#17171c}
-.card{background:#fff;border:1px solid #e7e7ed;border-radius:17px;padding:20px;transition:.2s}
-.card:hover{transform:translateY(-3px);box-shadow:0 10px 30px #0000000c}
-.icon{min-height:105px;border-radius:13px;background:#eeeef4;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:17px;overflow:hidden}.media-icon{display:block;height:auto}.media-icon img,.media-icon video{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}.media-icon video{background:#111}.media-note{font-size:11px;color:#666;margin:-7px 0 9px}
-.badge{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.7px}
-.card h3{font-size:19px;margin:5px 0 8px}.card p{font-size:14px;color:#666;min-height:42px}
-.card-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:17px}
-.price{font-weight:800;font-size:18px}.card .btn{padding:9px 13px;font-size:13px}
-.notice{background:#fff;border:1px dashed #d5d5df;border-radius:15px;padding:24px;text-align:center;color:#555}
-.notice .btn{margin-top:12px}
-.feature strong{display:block;margin-bottom:5px}.feature span{font-size:13px;color:#666}
-footer{margin-top:50px;background:#17171c;color:#bbb;padding:30px 20px;text-align:center;font-size:13px}
+button,input{font:inherit}
+button{cursor:pointer}
+.layout{min-height:100vh;display:flex}
+.sidebar{width:235px;flex:0 0 235px;min-height:100vh;position:fixed;left:0;top:0;bottom:0;background:linear-gradient(180deg,#061329,#020817);border-right:1px solid var(--line);padding:18px 18px;z-index:30;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:23px;letter-spacing:-.6px;padding:2px 3px 26px}
+.brand-mark{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#7b39ff,#20cfff);display:grid;place-items:center;font-weight:1000;font-size:22px;box-shadow:0 8px 25px rgba(76,86,255,.35)}
+.brand span{background:linear-gradient(90deg,#fff,#9b61ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.side-nav{display:grid;gap:7px}
+.side-link{display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:12px;color:#dce6fb;font-size:14px;font-weight:700;border:1px solid transparent}
+.side-link:hover,.side-link.active{background:linear-gradient(90deg,#10295d,#0d2044);border-color:#1e4381}
+.side-link.active{box-shadow:inset 3px 0 0 #7752ff}
+.side-icon{width:22px;text-align:center;font-size:17px}
+.side-sep{height:1px;background:var(--line);margin:13px 3px}
+.binance-box{margin-top:auto;border:1px solid #26497b;border-radius:14px;padding:12px;background:linear-gradient(145deg,#0b1f42,#06142c)}
+.binance-top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.binance-label{font-size:12px;color:#c8d5ec}.binance-uid{font-size:14px;font-weight:900;margin-top:2px}
+.copy-mini{border:1px solid #31598e;background:#091a35;color:#fff;border-radius:8px;padding:5px 7px;font-size:11px}
+.binance-box img{display:block;width:82px;height:82px;object-fit:cover;background:#fff;border-radius:8px;margin:12px auto 2px}
+.side-note{font-size:10px;color:#7184a2;text-align:center}
+.main{margin-left:235px;width:calc(100% - 235px);min-width:0}
+.topbar{height:76px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:18px;padding:12px 28px;position:sticky;top:0;background:rgba(2,8,23,.88);backdrop-filter:blur(14px);z-index:20}
+.top-search{flex:1;max-width:650px;position:relative}
+.top-search input{width:100%;height:44px;padding:0 16px 0 42px;border:1px solid #294b7b;background:#081a37;color:#fff;border-radius:24px;outline:none}
+.top-search input:focus{border-color:#617dff;box-shadow:0 0 0 3px rgba(89,100,255,.12)}
+.search-icon{position:absolute;left:16px;top:11px;color:#b9c7dc}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:12px}
+.icon-btn{width:38px;height:38px;border:1px solid #294b7b;background:#081a37;color:#dbe7fb;border-radius:50%}
+.account-btn{border:1px solid #31598e;background:#0a1c3a;color:#fff;border-radius:22px;padding:9px 14px;font-weight:800}
+.mobile-menu{display:none}
+.content{max-width:1250px;margin:0 auto;padding:28px}
+.hero{position:relative;overflow:hidden;border:1px solid #274b83;border-radius:18px;min-height:385px;padding:38px 38px;background:
+radial-gradient(circle at 82% 45%,rgba(48,121,255,.2),transparent 25%),
+radial-gradient(circle at 70% 75%,rgba(154,61,255,.16),transparent 28%),
+linear-gradient(120deg,#081735,#07112b 55%,#091b40);box-shadow:var(--shadow)}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:20px;align-items:center;height:100%}
+.pill{display:inline-flex;align-items:center;gap:7px;background:linear-gradient(90deg,#30138c,#4218a7);border:1px solid #7447ff;color:#fff;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:800;margin-bottom:15px}
+.hero h1{font-size:clamp(38px,5vw,61px);line-height:1.02;letter-spacing:-2.5px;max-width:650px}
+.hero h1 span{background:linear-gradient(90deg,#5e8dff,#bd46ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:#bdc9dc;font-size:16px;max-width:570px;margin:15px 0 22px}
+.hero-search{display:flex;max-width:600px;background:#0b2145;border:1px solid #406291;border-radius:28px;padding:5px}
+.hero-search input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#fff;padding:10px 13px}
+.hero-search button{border:0;border-radius:22px;padding:10px 22px;color:#fff;font-weight:900;background:linear-gradient(90deg,#5269ff,#713dff);box-shadow:0 8px 25px rgba(73,83,255,.3)}
+.stats{display:flex;gap:0;margin-top:24px;max-width:600px}
+.stat{padding:0 22px;border-right:1px solid #29436a}.stat:first-child{padding-left:0}.stat:last-child{border:0}
+.stat strong{display:block;font-size:16px}.stat small{color:#91a4c1;font-size:11px}
+.hero-art{height:100%;min-height:280px;display:grid;place-items:center;position:relative}
+.orb{width:260px;height:260px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8eeeff 0,#2f77ff 20%,#6328d9 48%,transparent 69%);filter:blur(1px);opacity:.8;position:absolute}
+.ai-card{position:relative;width:145px;height:145px;border-radius:30px;background:linear-gradient(145deg,#0a2a61,#121c58);border:2px solid #4d8cff;box-shadow:0 0 45px rgba(48,117,255,.55),0 0 80px rgba(153,50,255,.25);display:grid;place-items:center;font-size:66px;transform:rotate(-4deg)}
+.media-chip{position:absolute;padding:15px 17px;border-radius:16px;background:#0a1c3a;border:1px solid #4770a9;box-shadow:0 12px 35px rgba(0,0,0,.3);font-weight:900}
+.media-chip.one{top:25px;left:25px}.media-chip.two{right:10px;bottom:35px}
+.section{margin-top:32px}
+.section-title{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:15px}
+.section-title h2{font-size:25px;letter-spacing:-.5px}.section-title p{color:#8192ad;font-size:13px}
+.filters{display:flex;gap:10px;overflow:auto;padding-bottom:4px}
+.filter{border:1px solid #284873;background:#071733;color:#b9c8df;border-radius:999px;padding:10px 19px;white-space:nowrap;font-weight:800}
+.filter.active{background:linear-gradient(90deg,#583cff,#466dff);border-color:#6377ff;color:#fff;box-shadow:0 8px 25px rgba(68,83,255,.22)}
+.prompt-head{display:flex;justify-content:space-between;align-items:center;margin:30px 0 14px}
+.prompt-head h2{font-size:25px}.prompt-head p{color:#8192ad;font-size:13px}.view-all{color:#8ca6ff;font-weight:800;font-size:13px}
+.tabs{display:flex;gap:9px}.type-tab{border:1px solid #294873;background:#071733;color:#b9c8df;padding:9px 15px;border-radius:999px;font-weight:800}.type-tab.active{background:#3f66ff;color:#fff;border-color:#5978ff}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}
+.card{border:1px solid #1e416f;border-radius:15px;background:linear-gradient(180deg,#081a36,#06142b);padding:10px;min-width:0;transition:.2s;overflow:hidden}
+.card:hover{transform:translateY(-4px);border-color:#456dba;box-shadow:0 15px 35px rgba(0,0,0,.25)}
+.card-media{height:145px;border-radius:11px;background:#0e2445;overflow:hidden;display:grid;place-items:center;margin-bottom:10px;position:relative}
+.card-media img,.card-media video{width:100%;height:100%;object-fit:cover;display:block}.card-media video{background:#000}
+.card-icon{font-size:42px}
+.badge{position:absolute;right:8px;top:8px;padding:4px 8px;border-radius:8px;font-size:10px;font-weight:900;background:#9a36ff;color:#fff}.badge.free{background:#18dc9b;color:#03180f}
+.category{display:inline-flex;align-items:center;gap:5px;color:#9bb2d6;font-size:10px;font-weight:800;margin:1px 3px 5px}
+.card h3{font-size:15px;margin:0 3px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card p{color:#94a8c7;font-size:11px;line-height:1.45;min-height:47px;margin:0 3px}
+.card-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.price{font-weight:900;font-size:14px}.free-price{color:var(--green)}
+.view-btn{border:0;background:linear-gradient(90deg,#4c68ff,#633fff);color:#fff;border-radius:9px;padding:9px 12px;font-size:11px;font-weight:900}
+.notice{border:1px dashed #274873;background:#07152d;color:#9db0cd;border-radius:13px;padding:22px;text-align:center}
+footer{margin-top:45px;border-top:1px solid var(--line);padding:25px 28px;color:#778aa8;font-size:11px;display:flex;justify-content:space-between;gap:20px}
 footer a{text-decoration:underline}
-@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.features{grid-template-columns:1fr}.nav-link{display:none}.nav-link.nav-account{display:inline}}
-.nav .btn{white-space:nowrap}
-@media(max-width:520px){.grid{grid-template-columns:1fr}.hero{margin:15px 12px}.section{padding:0 12px}.hero h1{font-size:40px}.nav-inner{gap:14px;padding:14px 12px}.nav .btn{padding:10px 13px;font-size:14px}}
+@media(max-width:1050px){.grid{grid-template-columns:repeat(2,1fr)}.hero-grid{grid-template-columns:1fr}.hero-art{display:none}}
+@media(max-width:720px){
+ .sidebar{width:78px;flex-basis:78px;padding:15px 10px}.brand{justify-content:center;padding-bottom:20px}.brand span,.side-link span:not(.side-icon),.binance-box,.side-sep{display:none}.side-link{justify-content:center;padding:12px}.main{margin-left:78px;width:calc(100% - 78px)}.topbar{padding:10px 13px}.top-actions .icon-btn{display:none}.account-btn{font-size:11px;padding:8px 10px}.content{padding:15px}.hero{padding:27px 22px}.hero h1{font-size:38px}.stats{overflow:auto}.stat{min-width:105px;padding:0 14px}.grid{grid-template-columns:1fr}.prompt-head{align-items:flex-start;flex-direction:column}.tabs{width:100%}.type-tab{flex:1}
+}
+@media(max-width:470px){
+ .sidebar{width:62px}.main{margin-left:62px;width:calc(100% - 62px)}.brand-mark{width:34px;height:34px}.top-search{max-width:none}.account-btn{display:none}.hero-search{max-width:100%}.hero-search button{padding:10px 15px}.hero h1{font-size:32px;letter-spacing:-1.5px}.hero p{font-size:14px}.section-title h2,.prompt-head h2{font-size:21px}footer{flex-direction:column;padding:20px 15px}
+}
 </style>
 </head>
 <body>
-<nav class="nav">
-<div class="nav-inner">
-<a class="logo" href="index.html">Prompt<span>Hub</span></a>
-<a class="nav-link" href="#prompts">Prompts</a>
-<a class="nav-link" href="#categories">Categories</a>
-<a class="nav-link" href="#about">About</a>
-<a class="nav-link nav-account" href="account.html">Account</a>
-</div>
-</nav>
+<div class="layout">
+<aside class="sidebar">
+  <a class="brand" href="index.html"><span class="brand-mark">P</span><span>PromptHub</span></a>
+  <nav class="side-nav">
+    <a class="side-link active" href="index.html"><span class="side-icon">⌂</span><span>Home</span></a>
+    <a class="side-link" href="#freeSection"><span class="side-icon">🎁</span><span>Free Prompts</span></a>
+    <a class="side-link" href="#paidSection"><span class="side-icon">♛</span><span>Paid Prompts</span></a>
+    <div class="side-sep"></div>
+    <a class="side-link" href="account.html"><span class="side-icon">♙</span><span>Account</span></a>
+  </nav>
+  <div class="binance-box">
+    <div class="binance-top">
+      <div><div class="binance-label">Binance UID</div><div class="binance-uid">984200359</div></div>
+      <button class="copy-mini" id="copyUid" type="button">Copy</button>
+    </div>
+    <img src="assets/binance-qr.jpg" alt="Binance payment QR" onerror="this.style.display='none'">
+    <div class="side-note">Payment details</div>
+  </div>
+</aside>
 
-<main>
+<div class="main">
+<header class="topbar">
+  <div class="top-search">
+    <span class="search-icon">⌕</span>
+    <input id="topSearch" type="search" placeholder="Search prompts..." aria-label="Search prompts">
+  </div>
+  <div class="top-actions">
+    <button class="icon-btn" type="button" aria-label="Theme">☼</button>
+    <a class="account-btn" href="account.html">◉ &nbsp; My Account</a>
+  </div>
+</header>
+
+<main class="content">
 <section class="hero">
-<div class="tag">PREMIUM AI PROMPTS</div>
-<h1>Turn your ideas into better AI results.</h1>
-<p>Discover ready-to-use prompts for AI images and video.</p>
-<div class="search" role="search">
-<input id="searchInput" type="search" placeholder="Search prompts..." aria-label="Search prompts">
-<button class="btn" id="searchBtn" type="button">Search</button>
-</div>
+  <div class="hero-grid">
+    <div>
+      <div class="pill">✦ AI PROMPTS HUB</div>
+      <h1>Turn Your Ideas into <span>Stunning Results</span></h1>
+      <p>Discover high-quality prompts for AI images and videos. Save time, boost creativity, and bring your ideas to life.</p>
+      <div class="hero-search">
+        <input id="heroSearch" type="search" placeholder="Search prompts..." aria-label="Search prompts">
+        <button id="heroSearchBtn" type="button">Search →</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong id="statCount">0+</strong><small>Premium Prompts</small></div>
+        <div class="stat"><strong>2</strong><small>Categories</small></div>
+        <div class="stat"><strong>100%</strong><small>Original Content</small></div>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="orb"></div>
+      <div class="media-chip one">🖼️ AI Images</div>
+      <div class="ai-card">✦</div>
+      <div class="media-chip two">▶ AI Video</div>
+    </div>
+  </div>
 </section>
 
 <section class="section" id="categories">
-<div class="section-head"><h2>Browse categories</h2></div>
-<div class="cats" id="cats">
-<button class="cat active" type="button" data-cat="all" aria-pressed="true">All</button>
-<button class="cat" type="button" data-cat="image" aria-pressed="false">AI Images</button>
-<button class="cat" type="button" data-cat="video" aria-pressed="false">AI Video</button>
-</div>
+  <div class="section-title"><div><h2>Browse Categories</h2><p>Choose a category and explore AI prompts.</p></div></div>
+  <div class="filters" id="cats">
+    <button class="filter active" data-cat="all" type="button">All</button>
+    <button class="filter" data-cat="image" type="button">▣ &nbsp; AI Images</button>
+    <button class="filter" data-cat="video" type="button">▶ &nbsp; AI Video</button>
+  </div>
 </section>
 
 <section class="section" id="prompts">
-<div class="section-head">
-<h2>Featured prompts</h2>
-<div class="muted">Ready-to-use prompts for your next project.</div>
-</div>
-
-<div class="notice" id="status" role="status">Connecting to product database…</div>
-
-<div id="freeSection" class="prompt-list" hidden>
-  <div class="list-title">
-    <h3 class="free-title">🆓 Free Prompts</h3>
-    <div class="muted">Completely free to use.</div>
+  <div class="prompt-head">
+    <div><h2>🔥 Featured Prompts</h2><p>Handpicked prompts to help you get the best results.</p></div>
+    <div class="tabs">
+      <button class="type-tab active" data-type="all" type="button">All</button>
+      <button class="type-tab" data-type="free" type="button">Free Prompts</button>
+      <button class="type-tab" data-type="paid" type="button">Paid Prompts</button>
+    </div>
   </div>
-  <div class="grid" id="freeGrid"></div>
-  <div class="notice" id="freeEmpty" hidden>No free prompts match your search.</div>
-</div>
 
-<div id="paidSection" class="prompt-list" hidden>
-  <div class="list-title">
-    <h3 class="paid-title">💎 Paid Prompts</h3>
-    <div class="muted">Premium ready-to-use prompts.</div>
+  <div class="notice" id="status">Loading prompts…</div>
+
+  <div id="freeSection" hidden>
+    <div class="prompt-head" style="margin-top:22px"><div><h2 style="font-size:20px">🎁 Free Prompts</h2></div></div>
+    <div class="grid" id="freeGrid"></div>
   </div>
-  <div class="grid" id="paidGrid"></div>
-  <div class="notice" id="paidEmpty" hidden>No paid prompts match your search.</div>
-</div>
 
-<div class="notice" id="empty" hidden></div>
+  <div id="paidSection" hidden>
+    <div class="prompt-head" style="margin-top:22px"><div><h2 style="font-size:20px">♛ Paid Prompts</h2></div></div>
+    <div class="grid" id="paidGrid"></div>
+  </div>
+
+  <div class="notice" id="empty" hidden></div>
 </section>
-
 </main>
 
-<footer>© 2026 PromptHub. All rights reserved. · <a href="legal.html">Terms &amp; Privacy</a></footer>
+<footer><span>© 2026 PromptHub. All rights reserved.</span><a href="legal.html">Terms &amp; Privacy</a></footer>
+</div>
+</div>
 
 <script>
-(function () {
-  'use strict';
-
-  // Homepage is intentionally self-contained so it still works if common.js
-  // or the Supabase CDN is unavailable.
-  var SUPABASE_URL = 'https://bwtblyvnsiguhopmxggi.supabase.co';
-  var SUPABASE_KEY = 'sb_publishable_BKBleSWgGlggg-MPaBBBcg_zTObBTW8';
-  var products = [];
-  var currentCategory = 'all';
-
-  var CATEGORIES = {
-    image: { label: 'AI Images', icon: '🖼️' },
-    video: { label: 'AI Video', icon: '🎬' },
-  };
-
-  var $ = function (id) { return document.getElementById(id); };
-
-  function esc(x) {
-    return String(x == null ? '' : x).replace(/[&<>"']/g, function (m) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
-    });
-  }
-
-  function money(amount, currency) {
-    var n = Number(amount);
-    if (!isFinite(n)) return '-';
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: currency || 'USD',
-        minimumFractionDigits: n % 1 === 0 ? 0 : 2
-      }).format(n);
-    } catch (e) {
-      return n + ' ' + (currency || '');
-    }
-  }
-
-  function card(p) {
-    var c = CATEGORIES[p.category] || { label: p.category || 'Other', icon: '📦' };
-    var media = '';
-    if (p.image_url) {
-      media += '<div class="icon media-icon"><img src="' + esc(p.image_url) + '" alt="' + esc(p.name) + '" loading="lazy"></div>';
-    }
-    if (p.video_url) {
-      media += '<div class="icon media-icon"><video src="' + esc(p.video_url) + '" controls preload="metadata" playsinline></video></div>';
-    }
-    if (!media) {
-      media = '<div class="icon" aria-hidden="true">' + c.icon + '</div>';
-    }
-    return '<article class="card">' +
-      media +
-      '<div class="badge">' + esc(c.label) + '</div>' +
-      '<h3>' + esc(p.name) + '</h3>' +
-      '<p>' + esc(p.description || '') + '</p>' +
-      '<div class="card-bottom"><span class="price">' + esc(money(p.price, p.currency)) + '</span>' +
-      '<a class="btn" href="product.html?id=' + Number(p.id) + '">View Prompt</a></div>' +
-      '</article>';
-  }
-
-  function render() {
-    var q = $('searchInput').value.toLowerCase().trim();
-
-    var list = products.filter(function (p) {
-      if (p.category !== 'image' && p.category !== 'video') return false;
-      var okCat = currentCategory === 'all' || p.category === currentCategory;
-      var okQ = !q || ((p.name || '') + ' ' + (p.description || '')).toLowerCase().indexOf(q) !== -1;
-      return okCat && okQ;
-    });
-
-    var free = list.filter(function (p) {
-      return Number(p.price) === 0;
-    });
-
-    var paid = list.filter(function (p) {
-      return Number(p.price) > 0;
-    });
-
-    $('freeGrid').innerHTML = free.map(card).join('');
-    $('paidGrid').innerHTML = paid.map(card).join('');
-
-    $('freeSection').hidden = free.length === 0;
-    $('paidSection').hidden = paid.length === 0;
-
-    $('freeEmpty').hidden = true;
-    $('paidEmpty').hidden = true;
-
-    if (!list.length) {
-      $('empty').hidden = false;
-      $('empty').textContent = products.length
-        ? 'No prompts match your search. Try another word or category.'
-        : 'No prompts are available yet. Please check back soon.';
-    } else {
-      $('empty').hidden = true;
-    }
-  }
-
-  function fail(message) {
-    var s = $('status');
-    s.hidden = false;
-    s.innerHTML = '<div>Could not load prompts.</div><div class="muted" style="margin-top:6px">' +
-      esc(message || 'Unknown database error.') + '</div><button class="btn" type="button" id="retry">Try again</button>';
-    $('retry').onclick = load;
-  }
-
-  async function load() {
-    var s = $('status');
-    s.hidden = false;
-    s.textContent = 'Connecting to product database…';
-
-    var url = SUPABASE_URL.replace(/\/$/, '') +
-      '/rest/v1/products?select=id,name,category,description,price,currency,image_url,video_url&active=eq.true&order=id.asc';
-
-    try {
-      var response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Accept': 'application/json'
-        },
-        cache: 'no-store'
-      });
-
-      var body = await response.text();
-      if (!response.ok) {
-        throw new Error('Supabase returned HTTP ' + response.status + (body ? ': ' + body.slice(0, 300) : ''));
-      }
-
-      var data = JSON.parse(body);
-      if (!Array.isArray(data)) {
-        throw new Error('Supabase returned an unexpected response.');
-      }
-
-      products = data;
-      s.hidden = true;
-      render();
-    } catch (e) {
-      fail(e && e.message ? e.message : String(e));
-      console.error('PromptHub load error:', e);
-    }
-  }
-
-  $('cats').addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-cat]');
-    if (!b) return;
-    currentCategory = b.dataset.cat;
-    document.querySelectorAll('.cat').forEach(function (x) {
-      var on = x === b;
-      x.classList.toggle('active', on);
-      x.setAttribute('aria-pressed', on ? 'true' : 'false');
-    });
-    render();
-  });
-
-  $('searchInput').addEventListener('input', render);
-  $('searchBtn').addEventListener('click', render);
-
-  load();
+(function(){
+'use strict';
+var SUPABASE_URL='https://bwtblyvnsiguhopmxggi.supabase.co';
+var SUPABASE_KEY='sb_publishable_BKBleSWgGlggg-MPaBBBcg_zTObBTW8';
+var products=[],category='all',type='all';
+var $=function(id){return document.getElementById(id)};
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]})}
+function money(v,c){var n=Number(v);if(!isFinite(n))return '-';try{return new Intl.NumberFormat('en-US',{style:'currency',currency:c||'USD',minimumFractionDigits:n%1===0?0:2}).format(n)}catch(e){return n+' '+(c||'')}}
+function card(p){
+ var isFree=Number(p.price)===0;
+ var cat=p.category==='image'?'AI Images':p.category==='video'?'AI Video':(p.category||'Other');
+ var media=p.image_url?'<img src="'+esc(p.image_url)+'" alt="'+esc(p.name)+'" loading="lazy">':p.video_url?'<video src="'+esc(p.video_url)+'" controls preload="metadata" playsinline></video>':'<div class="card-icon">'+(p.category==='video'?'▶':'✦')+'</div>';
+ return '<article class="card"><div class="card-media">'+media+'<span class="badge '+(isFree?'free':'')+'">'+(isFree?'Free':'Paid')+'</span></div><div class="category">'+(p.category==='video'?'▶':'▣')+' '+esc(cat)+'</div><h3>'+esc(p.name)+'</h3><p>'+esc(p.description||'')+'</p><div class="card-bottom"><span class="price '+(isFree?'free-price':'')+'">'+(isFree?'Free':esc(money(p.price,p.currency)))+'</span><a class="view-btn" href="product.html?id='+Number(p.id)+'">View Prompt →</a></div></article>'
+}
+function render(){
+ var q=($('heroSearch').value+' '+$('topSearch').value).toLowerCase().trim();
+ var list=products.filter(function(p){
+   if(p.category!=='image'&&p.category!=='video')return false;
+   if(category!=='all'&&p.category!==category)return false;
+   if(type==='free'&&Number(p.price)!==0)return false;
+   if(type==='paid'&&Number(p.price)<=0)return false;
+   if(q&&((p.name||'')+' '+(p.description||'')).toLowerCase().indexOf(q)===-1)return false;
+   return true;
+ });
+ var free=list.filter(function(p){return Number(p.price)===0});
+ var paid=list.filter(function(p){return Number(p.price)>0});
+ $('freeGrid').innerHTML=free.map(card).join('');
+ $('paidGrid').innerHTML=paid.map(card).join('');
+ $('freeSection').hidden=free.length===0;
+ $('paidSection').hidden=paid.length===0;
+ $('empty').hidden=list.length>0;
+ if(!list.length)$('empty').textContent=products.length?'No prompts match your search.':'No prompts are available yet.';
+}
+function setSearch(v){$('heroSearch').value=v;$('topSearch').value=v;render()}
+$('cats').addEventListener('click',function(e){var b=e.target.closest('[data-cat]');if(!b)return;category=b.dataset.cat;document.querySelectorAll('.filter').forEach(function(x){x.classList.toggle('active',x===b)});render()});
+document.querySelectorAll('.type-tab').forEach(function(b){b.addEventListener('click',function(){type=b.dataset.type;document.querySelectorAll('.type-tab').forEach(function(x){x.classList.toggle('active',x===b)});render()})});
+$('heroSearch').addEventListener('input',function(){setSearch(this.value)});
+$('topSearch').addEventListener('input',function(){setSearch(this.value)});
+$('heroSearchBtn').addEventListener('click',function(){setSearch($('heroSearch').value)});
+$('copyUid').addEventListener('click',function(){navigator.clipboard&&navigator.clipboard.writeText('984200359').then(function(){$('copyUid').textContent='Copied';setTimeout(function(){$('copyUid').textContent='Copy'},1200)}).catch(function(){})});
+async function load(){
+ var url=SUPABASE_URL+'/rest/v1/products?select=id,name,category,description,price,currency,image_url,video_url&active=eq.true&order=id.asc';
+ try{
+  var r=await fetch(url,{headers:{apikey:SUPABASE_KEY,Accept:'application/json'},cache:'no-store'});
+  var body=await r.text();if(!r.ok)throw new Error('HTTP '+r.status);
+  products=JSON.parse(body);$('statCount').textContent=products.length+'+';
+  $('status').hidden=true;render();
+ }catch(e){
+  $('status').textContent='Could not load prompts. Please refresh and try again.';
+  $('empty').hidden=false;
+ }
+}
+load();
 })();
 </script>
 </body>
