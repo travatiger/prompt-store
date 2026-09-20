@@ -42,6 +42,7 @@ button:disabled{opacity:.6;cursor:wait}
 .ok{color:#166534}.bad{color:#991b1b}
 @media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.chat{grid-template-columns:1fr}.list{max-height:180px}}
 </style>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#020817">
 </head>
 <body>
 <!-- Errors live OUTSIDE the login box so they stay visible after login too. -->
@@ -69,6 +70,7 @@ button:disabled{opacity:.6;cursor:wait}
 <button class="tab" type="button" data-p="chats">💬 Chats</button>
 <button class="tab" type="button" data-p="payments">💳 Payments</button>
 <button class="tab" type="button" data-p="products">📦 Products</button>
+<button class="tab" type="button" data-p="reviews">⭐ Reviews</button>
 </div>
 
 <section id="dash">
@@ -77,6 +79,9 @@ button:disabled{opacity:.6;cursor:wait}
 <div class="stat">Chats<div id="sh" class="num">0</div></div>
 <div class="stat">Pending Payments<div id="sp" class="num">0</div></div>
 <div class="stat">Products<div id="sx" class="num">0</div></div>
+<div class="stat">Views<div id="sv" class="num">0</div></div>
+<div class="stat">Favorites<div id="sf" class="num">0</div></div>
+<div class="stat">Reviews<div id="sr" class="num">0</div></div>
 </div>
 <div class="card"><b>Logged in as</b><div id="who"></div></div>
 </section>
@@ -111,6 +116,8 @@ button:disabled{opacity:.6;cursor:wait}
 <tbody id="pb"></tbody>
 </table></div></div>
 </section>
+
+<section id="reviews" class="hidden"><div class="card"><h2>⭐ Review Moderation</h2><p style="font-size:13px;color:#666">Approve or hide customer reviews.</p><div class="table"><table><thead><tr><th>Date</th><th>Product</th><th>Rating</th><th>Review</th><th>Status</th><th>Action</th></tr></thead><tbody id="rb"></tbody></table></div></div></section>
 
 <section id="products" class="hidden">
 <div class="card form">
@@ -260,10 +267,11 @@ button:disabled{opacity:.6;cursor:wait}
     currentPane = b.dataset.p;
     clearError();
     document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('active', x === b); });
-    ['dash', 'customers', 'chats', 'payments', 'products'].forEach(function (id) {
+    ['dash', 'customers', 'chats', 'payments', 'products', 'reviews'].forEach(function (id) {
       $(id).classList.toggle('hidden', id !== currentPane);
     });
     if (currentPane === 'chats') chatPeople();
+    if (currentPane === 'reviews') loadReviews();
   });
 
   /* ---------- data loading ---------- */
@@ -285,6 +293,7 @@ button:disabled{opacity:.6;cursor:wait}
   async function loadAll() {
     // Each loader handles its own errors, so one failure never blocks the others.
     await Promise.all([refreshStats(), loadCustomers(), loadPayments(), loadProducts()]);
+    await refreshProStats();
   }
 
   async function loadCustomers() {
@@ -448,7 +457,7 @@ button:disabled{opacity:.6;cursor:wait}
   }
 
   async function loadProducts() {
-    var r = await db.from('products').select('id,name,category,price,currency,is_free,active').in('category', ['image','video']).order('id', { ascending: false });
+    var r = await db.from('products').select('id,name,category,price,currency,is_free,active,featured').in('category', ['image','video']).order('id', { ascending: false });
     $('xb').innerHTML = r.error
       ? '<tr><td colspan="5" class="bad">' + esc(r.error.message) + '</td></tr>'
       : (r.data || []).map(function (x) {
@@ -459,7 +468,7 @@ button:disabled{opacity:.6;cursor:wait}
             '<button class="gray" type="button" data-edit="' + id + '">Edit</button> ' +
             '<button class="' + (x.active ? 'red' : 'green') + '" type="button" data-toggle="' + id + '" data-active="' + (x.active ? '1' : '0') + '">' +
             (x.active ? 'Deactivate' : 'Activate') + '</button> ' +
-            '<button class="red" type="button" data-delete="' + id + '">Delete permanently</button></td></tr>';
+            '<button class="blue" type="button" data-feature="' + id + '" data-featured="' + (x.featured ? '1':'0') + '">' + (x.featured?'Unfeature':'★ Feature') + '</button> ' + '<button class="gray" type="button" data-duplicate="' + id + '">Duplicate</button> ' + '<button class="red" type="button" data-delete="' + id + '">Delete permanently</button></td></tr>';
         }).join('') || '<tr><td colspan="5">No products yet</td></tr>';
   }
 
@@ -467,6 +476,20 @@ button:disabled{opacity:.6;cursor:wait}
     var ed = e.target.closest('button[data-edit]');
     var tg = e.target.closest('button[data-toggle]');
     var del = e.target.closest('button[data-delete]');
+    var feat = e.target.closest('button[data-feature]');
+    var dup = e.target.closest('button[data-duplicate]');
+    if (feat) {
+      feat.disabled=true;
+      var fr=await db.rpc('admin_set_product_featured',{p_id:Number(feat.dataset.feature),p_featured:feat.dataset.featured!=='1'});
+      if(fr.error) showError('Could not update featured status',fr.error.message);
+      await loadProducts(); return;
+    }
+    if (dup) {
+      dup.disabled=true;
+      var dr=await db.rpc('admin_duplicate_product',{p_id:Number(dup.dataset.duplicate)});
+      if(dr.error) showError('Could not duplicate product',dr.error.message); else await loadProducts();
+      dup.disabled=false; return;
+    }
     if (del) {
       var did = Number(del.dataset.delete);
       if (!confirm('PERMANENT DELETE\n\nThis removes the product, its prompt/media, and ALL orders/payment requests linked to this product. This cannot be undone.\n\nContinue?')) return;
@@ -580,6 +603,22 @@ button:disabled{opacity:.6;cursor:wait}
     }
   });
 
+async function refreshProStats(){
+    var jobs=await Promise.allSettled([
+      db.from('product_views').select('id',{count:'exact',head:true}),
+      db.from('favorites').select('product_id',{count:'exact',head:true}),
+      db.from('product_reviews').select('id',{count:'exact',head:true})
+    ]);
+    $('sv').textContent=jobs[0].status==='fulfilled'&&jobs[0].value.count!=null?jobs[0].value.count:'—';
+    $('sf').textContent=jobs[1].status==='fulfilled'&&jobs[1].value.count!=null?jobs[1].value.count:'—';
+    $('sr').textContent=jobs[2].status==='fulfilled'&&jobs[2].value.count!=null?jobs[2].value.count:'—';
+  }
+  async function loadReviews(){
+    var r=await db.from('product_reviews').select('id,rating,review,approved,created_at,products(name)').order('created_at',{ascending:false});
+    $('rb').innerHTML=r.error?'<tr><td colspan="6" class="bad">'+esc(r.error.message)+'</td></tr>':(r.data||[]).map(function(x){return '<tr><td>'+new Date(x.created_at).toLocaleString()+'</td><td>'+esc(x.products&&x.products.name||'-')+'</td><td>'+('★'.repeat(Number(x.rating)))+'</td><td class="wrapcell">'+esc(x.review)+'</td><td>'+ (x.approved?'<span class="ok">Approved</span>':'<span class="bad">Hidden</span>')+'</td><td><button class="'+(x.approved?'red':'green')+'" type="button" data-review="'+Number(x.id)+'" data-approved="'+(x.approved?'1':'0')+'">'+(x.approved?'Hide':'Approve')+'</button></td></tr>'}).join('')||'<tr><td colspan="6">No reviews.</td></tr>';
+  }
+  $('rb').addEventListener('click',async function(e){var b=e.target.closest('[data-review]');if(!b)return;b.disabled=true;var r=await db.rpc('admin_review_product',{p_review_id:Number(b.dataset.review),p_approved:b.dataset.approved!=='1'});if(r.error)showError('Could not update review',r.error.message);await loadReviews();await refreshProStats();});
+  
   /* ---------- chats ---------- */
 
   async function chatPeople() {
@@ -654,5 +693,6 @@ button:disabled{opacity:.6;cursor:wait}
   }
 })();
 </script>
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 </body>
 </html>

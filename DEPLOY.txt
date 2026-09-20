@@ -1,12 +1,28 @@
-PROMPTHUB COMPLETE DEPLOY
+PromptHub PRO ALL-FEATURES
 
-1. Upload all files to the Vercel/GitHub project root, preserving folders.
-2. In Supabase SQL Editor, run:
-   supabase/2026-09-20_COMPLETE-FREE-PAID-PAYMENT-MULTIMEDIA.sql
-3. The Binance QR is included at:
-   assets/binance-qr.jpg
-4. Binance UID: 984200359
-5. Free products show FREE (no dollar price).
-6. Paid products show the configured price and payment request flow.
-7. Admin-only product management remains protected by Supabase admin checks.
-8. Existing orders are preserved by normal deletion rules unless the updated admin deletion policy explicitly allows destructive removal.
+1. Keep a backup of your currently working PromptHub first.
+2. Upload the ZIP contents directly to your GitHub/Vercel project root.
+3. IMPORTANT: In Supabase SQL Editor, run ONCE:
+   supabase/2026-09-20-PRO-FEATURES.sql
+4. Do NOT rerun the older COMPLETE-FREE-PAID-PAYMENT-MULTIMEDIA.sql if your current database is already working. It is included as a reference/backup only.
+5. Hard-refresh the site after deployment.
+
+Included Pro features:
+- Favorites
+- My Library / existing unlocked prompts
+- Purchase history / payment status
+- Notifications panel
+- Search + category + free/paid filters
+- Newest / popular / featured / price sorting
+- Featured products
+- Product views analytics
+- Reviews and ratings + admin moderation
+- Admin dashboard analytics
+- Product duplicate control
+- Prompt Lab: generator / enhancer / playground
+- Share / gift link / export prompt
+- Recently viewed + basic badges/referral code
+- PWA install support / service worker
+- Existing Binance payment, QR, free/paid, multi-media and permanent-delete system preserved
+
+Note: Coupon database support is included in the Pro SQL for future order-price integration; the existing payment/order RPC is intentionally not replaced automatically.

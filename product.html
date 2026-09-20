@@ -36,9 +36,10 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
 #buyMsg{margin-top:12px;font-size:14px;color:#991b1b}
 .state{text-align:center;color:#555;padding:40px 10px}
 .state a{text-decoration:underline}
-.note{margin-top:20px;color:#6b6b75;font-size:13px}
+.note{margin-top:20px;color:#6b6b75;font-size:13px}.pro-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.fav{border:1px solid #d7d7df;background:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.fav.on{background:#8b45ff;color:#fff;border-color:#8b45ff}.reviews{margin-top:22px;border-top:1px solid #e4e4eb;padding-top:20px}.review-card{padding:12px 0;border-bottom:1px solid #eee}.stars{letter-spacing:2px;color:#f59e0b}.review-form{display:grid;gap:8px;margin-top:12px}.review-form textarea,.review-form select{padding:10px;border:1px solid #d7d7df;border-radius:9px;font:inherit}.related{margin-top:22px;border-top:1px solid #e4e4eb;padding-top:20px}.related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.related-card{border:1px solid #e4e4eb;border-radius:12px;padding:12px;background:#fff}.related-card small{color:#777}@media(max-width:650px){.related-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.top{flex-direction:column;align-items:flex-start}.visual{width:100%;min-height:220px}.gallery-stage{min-height:220px}.gallery-stage img,.gallery-stage video{max-height:360px}h1{font-size:30px}.product{padding:23px}}
 </style>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#020817">
 </head>
 <body>
 <nav class="nav">
@@ -82,6 +83,9 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
 </form>
 </div>
 
+<div class="pro-actions"><button class="fav" id="favBtn" type="button">♡ Favorite</button><button class="fav" id="shareBtn" type="button">↗ Share</button><button class="fav" id="exportBtn" type="button">⬇ Export</button><button class="fav" id="giftBtn" type="button">🎁 Gift/Share</button><span id="viewCount" style="color:#777;font-size:13px;padding:10px 0"></span></div>
+<div class="reviews"><h2>⭐ Reviews & Ratings</h2><div id="reviewSummary" style="color:#666;margin:5px 0 10px">Loading reviews…</div><div id="reviewList"></div><form id="reviewForm" class="review-form" hidden><select id="reviewRating" required><option value="5">★★★★★ — 5</option><option value="4">★★★★☆ — 4</option><option value="3">★★★☆☆ — 3</option><option value="2">★★☆☆☆ — 2</option><option value="1">★☆☆☆☆ — 1</option></select><textarea id="reviewText" maxlength="1000" minlength="3" placeholder="Write your review…" required></textarea><button class="buy" type="submit">Submit Review</button><div id="reviewMsg" class="request-msg"></div></form></div>
+<div class="related"><h2>🔗 Related Prompts</h2><div id="relatedGrid" class="related-grid"></div></div>
 <div class="prompt-box" id="promptBox" hidden>
 <h2>MASTER PROMPT</h2>
 <div id="promptText"></div>
@@ -104,6 +108,14 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
   var product = null;
   var promptText = '';
   var activeOrderId = null;
+  var favorites = [];
+  function favKey(){return 'ph_favorites_v1';}
+  function loadFavs(){try{favorites=JSON.parse(localStorage.getItem(favKey())||'[]').map(Number)}catch(e){favorites=[]}}
+  function isFav(){return favorites.indexOf(Number(product.id))!==-1}
+  function toggleFav(){var n=Number(product.id),i=favorites.indexOf(n);if(i>=0)favorites.splice(i,1);else favorites.push(n);localStorage.setItem(favKey(),JSON.stringify(favorites));renderFav()}
+  function renderFav(){$('favBtn').textContent=isFav()?'♥ Favorited':'♡ Favorite';$('favBtn').classList.toggle('on',isFav())}
+  function stars(n){return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n)}
+
 
   function stateMessage(html) {
     $('content').hidden = true;
@@ -152,6 +164,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     $('description').textContent = product.description;
     var isFree = !!product.is_free || Number(product.price) === 0;
     $('price').innerHTML = isFree ? '<span class="free-label">FREE</span>' : PH.esc(PH.money(product.price, product.currency));
+    loadFavs(); renderFav(); $('viewCount').textContent='';
     $('paymentMethod').hidden = isFree;
     $('state').hidden = true;
     $('content').hidden = false;
@@ -261,6 +274,8 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
       if (product.video_url) galleryItems.push({id:'legacy-video',media_type:'video',media_url:product.video_url,sort_order:1});
     }
     product._media = galleryItems;
+    PH.db.rpc('record_product_view',{p_product_id:product.id}).catch(function(){});
+    loadReviews(); loadRelated();
     renderProduct();
 
     var s = await PH.db.auth.getSession();
@@ -275,5 +290,6 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
   init();
 })();
 </script>
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 </body>
 </html>

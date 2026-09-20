@@ -19,6 +19,7 @@ h1{font-size:30px;margin-bottom:6px}h2{font-size:20px;margin:26px 0 8px}
 p,li{font-size:15px;color:#333}ul{margin:8px 0 8px 22px}
 .warn{background:#fef3c7;border:1px solid #fde68a;color:#78350f;border-radius:12px;padding:12px 14px;margin:14px 0;font-size:14px}
 </style>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#020817">
 </head>
 <body>
 <nav class="nav"><div class="nav-inner">
@@ -52,5 +53,6 @@ p,li{font-size:15px;color:#333}ul{margin:8px 0 8px 22px}
 <h2>Changes</h2>
 <p>We may update these terms. The latest version is always on this page.</p>
 </div></main>
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 </body>
 </html>

@@ -94,7 +94,7 @@ linear-gradient(120deg,#081735,#07112b 55%,#091b40);box-shadow:var(--shadow)}
 .gallery-dot{width:6px;height:6px;border:0;border-radius:50%;background:#7183a3;padding:0;flex:0 0 auto}.gallery-dot.active{background:#fff;transform:scale(1.25)}
 .gallery-count{position:absolute;left:8px;bottom:8px;z-index:3;background:rgba(2,8,23,.72);color:#fff;border-radius:999px;padding:3px 7px;font-size:9px;font-weight:800}
 @media(max-width:720px){.gallery-slide{min-height:180px}.gallery-slide img,.gallery-slide video{max-height:390px}.gallery-arrow{width:34px;height:34px}}
-.card-icon{font-size:42px}
+.pro-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 18px}.pro-select{border:1px solid #284873;background:#071733;color:#dbe7fb;border-radius:999px;padding:10px 14px;font-weight:800}.pro-note{font-size:12px;color:#8192ad}.favorite-btn{position:absolute;left:8px;top:8px;width:34px;height:34px;border-radius:50%;border:1px solid #52709f;background:rgba(2,8,23,.78);color:#fff;z-index:5}.favorite-btn.on{background:#8b45ff;border-color:#a980ff}.mini-meta{display:flex;gap:9px;align-items:center;color:#8192ad;font-size:11px;margin:5px 3px}.featured-badge{position:absolute;left:8px;bottom:8px;background:#ffb84d;color:#251500;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:900}.card{position:relative}.empty-pro{border:1px dashed #31598e;border-radius:15px;padding:28px;text-align:center;color:#8da0bd}.card-icon{font-size:42px}
 .badge{position:absolute;right:8px;top:8px;padding:4px 8px;border-radius:8px;font-size:10px;font-weight:900;background:#9a36ff;color:#fff}.badge.free{background:#18dc9b;color:#03180f}
 .category{display:inline-flex;align-items:center;gap:5px;color:#9bb2d6;font-size:10px;font-weight:800;margin:1px 3px 5px}
 .card h3{font-size:15px;margin:0 3px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -178,6 +178,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   .stats .stat:first-child{padding-left:0}
 }
 </style>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#020817">
 </head>
 <body>
 <div class="layout">
@@ -186,7 +187,9 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   <nav class="side-nav">
     <a class="side-link active" href="index.html"><span class="side-icon">⌂</span><span>Home</span></a>
     <a class="side-link" href="#freeSection"><span class="side-icon">🎁</span><span>Free Prompts</span></a>
+    <a class="side-link" href="#favSection" onclick="document.getElementById('favOnly').click();return true"><span class="side-icon">❤️</span><span>Favorites</span></a>
     <a class="side-link" href="#paidSection"><span class="side-icon">♛</span><span>Paid Prompts</span></a>
+    <a class="side-link" href="lab.html"><span class="side-icon">✨</span><span>Prompt Lab</span></a>
     <div class="side-sep"></div>
     <a class="side-link" href="account.html"><span class="side-icon">♙</span><span>Account</span></a>
   </nav>
@@ -248,6 +251,11 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 </section>
 
 <section class="section" id="prompts">
+  <div id="favSection" class="pro-toolbar">
+    <select id="sortPrompts" class="pro-select" aria-label="Sort prompts"><option value="new">Newest</option><option value="popular">Popular</option><option value="featured">Featured</option><option value="price-low">Price: Low to High</option><option value="price-high">Price: High to Low</option></select>
+    <button class="filter" id="favOnly" type="button">❤️ Favorites</button>
+    <span class="pro-note" id="filterInfo"></span>
+  </div>
   <div class="prompt-head">
     <div><h2>🔥 Featured Prompts</h2><p>Handpicked prompts to help you get the best results.</p></div>
     <div class="tabs">
@@ -282,7 +290,13 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 'use strict';
 var SUPABASE_URL='https://bwtblyvnsiguhopmxggi.supabase.co';
 var SUPABASE_KEY='sb_publishable_BKBleSWgGlggg-MPaBBBcg_zTObBTW8';
-var products=[],category='all',type='all';
+var products=[],category='all',type='all',favOnly=false;
+function favKey(){return 'ph_favorites_v1';}
+function getFavs(){try{return JSON.parse(localStorage.getItem(favKey())||'[]').map(Number)}catch(e){return[]}}
+function isFavorite(id){return getFavs().indexOf(Number(id))!==-1}
+function toggleFavorite(id){var a=getFavs(),n=Number(id),i=a.indexOf(n);if(i>=0)a.splice(i,1);else a.push(n);localStorage.setItem(favKey(),JSON.stringify(a));return i<0}
+function rememberViewed(id){try{var a=JSON.parse(localStorage.getItem('ph_recent_v1')||'[]').map(Number).filter(function(x){return x!==Number(id)});a.unshift(Number(id));localStorage.setItem('ph_recent_v1',JSON.stringify(a.slice(0,20)))}catch(e){}}
+
 var $=function(id){return document.getElementById(id)};
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]})}
 function money(v,c){var n=Number(v);if(!isFinite(n))return '-';try{return new Intl.NumberFormat('en-US',{style:'currency',currency:c||'USD',minimumFractionDigits:n%1===0?0:2}).format(n)}catch(e){return n+' '+(c||'')}}
@@ -308,7 +322,7 @@ function galleryMarkup(p){
 function card(p){
  var isFree=!!p.is_free || Number(p.price)===0;
  var cat=p.category==='image'?'AI Images':'AI Video';
- return '<article class="card">'+galleryMarkup(p)+'<div class="category">'+(p.category==='video'?'▶':'▣')+' '+esc(cat)+'</div><h3>'+esc(p.name)+'</h3><p>'+esc(p.description||'')+'</p><div class="card-bottom"><span class="price '+(isFree?'free-price':'')+'">'+(isFree?'Free':esc(money(p.price,p.currency)))+'</span><a class="view-btn" href="product.html?id='+Number(p.id)+'">View Prompt →</a></div></article>';
+ return '<article class="card"><button class="favorite-btn '+(isFavorite(p.id)?'on':'')+'" data-fav="'+Number(p.id)+'" aria-label="Favorite">'+(isFavorite(p.id)?'♥':'♡')+'</button>'+galleryMarkup(p)+(p.featured?'<span class="featured-badge">★ Featured</span>':'')+'<div class="category">'+(p.category==='video'?'▶':'▣')+' '+esc(cat)+'</div><h3>'+esc(p.name)+'</h3><p>'+esc(p.description||'')+'</p><div class="mini-meta">👁 '+Number(p.views||0)+' views · ★ '+Number(p.rating||0).toFixed(1)+'</div><div class="card-bottom"><span class="price '+(isFree?'free-price':'')+'">'+(isFree?'Free':esc(money(p.price,p.currency)))+'</span><a class="view-btn" href="product.html?id='+Number(p.id)+'">View Prompt →</a></div></article>';
 }
 function initGalleries(){
  document.querySelectorAll('.gallery').forEach(function(g){
@@ -344,8 +358,11 @@ function render(){
    if(type==='free'&&Number(p.price)!==0)return false;
    if(type==='paid'&&Number(p.price)<=0)return false;
    if(q&&((p.name||'')+' '+(p.description||'')).toLowerCase().indexOf(q)===-1)return false;
+   if(favOnly&&!isFavorite(p.id))return false;
    return true;
  });
+ var sort=$('sortPrompts').value;
+ list.sort(function(a,b){if(sort==='price-low')return Number(a.price)-Number(b.price);if(sort==='price-high')return Number(b.price)-Number(a.price);if(sort==='featured')return Number(!!b.featured)-Number(!!a.featured);if(sort==='popular')return Number(b.views||0)-Number(a.views||0);return Number(b.id)-Number(a.id)});
  var free=list.filter(function(p){return Number(p.price)===0});
  var paid=list.filter(function(p){return Number(p.price)>0});
  $('freeGrid').innerHTML=free.map(card).join('');
@@ -356,6 +373,9 @@ function render(){
  if(!list.length)$('empty').textContent=products.length?'No prompts match your search.':'No prompts are available yet.';
 }
 function setSearch(v){$('heroSearch').value=v;$('topSearch').value=v;render()}
+$('sortPrompts').addEventListener('change',render);
+$('favOnly').addEventListener('click',function(){favOnly=!favOnly;this.classList.toggle('active',favOnly);render()});
+document.addEventListener('click',function(e){var b=e.target.closest('[data-fav]');if(!b)return;e.preventDefault();toggleFavorite(b.dataset.fav);render()});
 $('cats').addEventListener('click',function(e){var b=e.target.closest('[data-cat]');if(!b)return;category=b.dataset.cat;document.querySelectorAll('.filter').forEach(function(x){x.classList.toggle('active',x===b)});render()});
 document.querySelectorAll('.type-tab').forEach(function(b){b.addEventListener('click',function(){type=b.dataset.type;document.querySelectorAll('.type-tab').forEach(function(x){x.classList.toggle('active',x===b)});render()})});
 $('heroSearch').addEventListener('input',function(){setSearch(this.value)});
@@ -363,7 +383,7 @@ $('topSearch').addEventListener('input',function(){setSearch(this.value)});
 $('heroSearchBtn').addEventListener('click',function(){setSearch($('heroSearch').value)});
 $('copyUid').addEventListener('click',function(){navigator.clipboard&&navigator.clipboard.writeText('984200359').then(function(){$('copyUid').textContent='Copied';setTimeout(function(){$('copyUid').textContent='Copy'},1200)}).catch(function(){})});
 async function load(){
- var url=SUPABASE_URL+'/rest/v1/products?select=id,name,category,description,price,currency,is_free,image_url,video_url&active=eq.true&order=id.asc';
+ var url=SUPABASE_URL+'/rest/v1/products?select=id,name,category,description,price,currency,is_free,image_url,video_url,featured&active=eq.true&order=id.asc';
  try{
   var r=await fetch(url,{headers:{apikey:SUPABASE_KEY,Accept:'application/json'},cache:'no-store'});
   var body=await r.text();if(!r.ok)throw new Error('HTTP '+r.status);
@@ -379,5 +399,6 @@ async function load(){
 load();
 })();
 </script>
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 </body>
 </html>

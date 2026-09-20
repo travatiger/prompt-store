@@ -47,6 +47,7 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
 .compose{display:flex;gap:8px;margin-top:10px}.compose input{margin:0;flex:1}
 .binance-pay-box{margin-top:12px;padding:14px;border:1px solid #e4e4eb;border-radius:14px;background:#fafafe;text-align:left}.binance-pay-box b{font-size:15px}.binance-pay-box img{background:#fff}
 </style>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#020817">
 </head>
 <body>
 <nav class="nav">
@@ -104,6 +105,9 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
 <div class="tabs" id="tabs">
 <button type="button" data-tab="orders" class="on">Orders</button>
 <button type="button" data-tab="prompts">My Prompts</button>
+<button type="button" data-tab="favorites">❤️ Favorites</button>
+<button type="button" data-tab="notifications">🔔 Notifications</button>
+<button type="button" data-tab="pro">🚀 Pro Hub</button>
 <button type="button" data-tab="chat">Support chat</button>
 </div>
 
@@ -236,7 +240,7 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
     $('hello').textContent = 'Hi, ' + name;
     showView('dash');
     var h = location.hash.replace('#', '');
-    selectTab(['orders', 'prompts', 'chat'].indexOf(h) !== -1 ? h : 'orders');
+    selectTab(['orders', 'prompts', 'favorites', 'notifications', 'pro', 'chat'].indexOf(h) !== -1 ? h : 'orders');
     startPoll();
   }
 
@@ -245,10 +249,35 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
     document.querySelectorAll('#tabs button').forEach(function (b) {
       b.classList.toggle('on', b.dataset.tab === name);
     });
-    ['orders', 'prompts', 'chat'].forEach(function (t) { $('pane-' + t).hidden = t !== name; });
+    ['orders', 'prompts', 'favorites', 'notifications', 'pro', 'chat'].forEach(function (t) { $('pane-' + t).hidden = t !== name; });
     if (name === 'orders') loadOrders();
     if (name === 'prompts') loadPrompts();
+    if (name === 'favorites') loadFavorites();
+    if (name === 'notifications') loadNotifications();
+    if (name === 'pro') loadProHub();
     if (name === 'chat') loadChat(true);
+  }
+  async function loadFavorites(){
+    var el=$('favoritesList'); el.innerHTML='<div class="card muted">Loading…</div>';
+    var ids=[]; try{ids=JSON.parse(localStorage.getItem('ph_favorites_v1')||'[]').map(Number)}catch(e){ }
+    if(!ids.length){el.innerHTML='<div class="card muted">No favorites yet. <a href="index.html">Browse prompts</a></div>';return;}
+    var r=await db.from('products').select('id,name,category,price,currency,is_free,description').in('id',ids).eq('active',true);
+    if(r.error){el.innerHTML='<div class="card err">'+esc(r.error.message)+'</div>';return;}
+    el.innerHTML=(r.data||[]).map(function(p){var free=!!p.is_free||Number(p.price)===0;return '<div class="card"><div class="orow"><b>'+esc(p.name)+'</b><a class="btn small" href="product.html?id='+Number(p.id)+'">View</a></div><div class="muted">'+esc(p.category)+' · '+(free?'FREE':PH.money(p.price,p.currency))+'</div><p>'+esc(p.description||'')+'</p></div>'}).join('')||'<div class="card muted">No active favorites.</div>';
+  }
+  async function loadNotifications(){
+    var el=$('notificationsList'); el.innerHTML='<div class="card muted">Loading…</div>';
+    var r=await db.from('notifications').select('id,title,body,read_at,created_at').order('created_at',{ascending:false}).limit(50);
+    if(r.error){el.innerHTML='<div class="card muted">Notifications will appear here when enabled by the Pro Features SQL.</div>';return;}
+    el.innerHTML=(r.data||[]).map(function(n){return '<div class="card"><div class="orow"><b>'+esc(n.title)+'</b><small class="muted">'+new Date(n.created_at).toLocaleString()+'</small></div><p>'+esc(n.body)+'</p></div>'}).join('')||'<div class="card muted">No notifications.</div>';
+    var unread=(r.data||[]).filter(function(n){return !n.read_at}).map(function(n){return n.id});
+    if(unread.length) await db.from('notifications').update({read_at:new Date().toISOString()}).in('id',unread);
+  }
+  function loadProHub(){
+    var code=(me&&me.id?me.id.replace(/-/g,'').slice(0,8):'PROMPTER').toUpperCase();
+    var recent=[];try{recent=JSON.parse(localStorage.getItem('ph_recent_v1')||'[]').map(Number)}catch(e){}
+    $('proHub').innerHTML='<h2>🚀 PromptHub Pro Hub</h2><p class="muted">Your marketplace extras and quick tools.</p><div class="card"><b>🔗 Referral code</b><p style="margin:6px 0">'+code+'</p><button class="btn small" id="copyRef">Copy code</button></div><div class="card"><b>🏆 Badges</b><p style="margin:6px 0">'+(recent.length?'Explorer · Prompt Collector':'New Member · Start exploring')+'</p></div><div class="card"><b>🕐 Recently viewed</b><p style="margin:6px 0">'+(recent.length?recent.map(function(id){return '<a href="product.html?id='+id+'" style="text-decoration:underline;margin-right:8px">Prompt #'+id+'</a>'}).join(''):'No recent prompts yet.')+'</p></div><a class="btn" href="lab.html">✨ Open Prompt Lab</a>';
+    var b=document.getElementById('copyRef');if(b)b.onclick=async function(){try{await navigator.clipboard.writeText(code);b.textContent='Copied ✓'}catch(e){}};
   }
   $('tabs').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-tab]');
@@ -453,5 +482,6 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
   init().catch(function (e) { $('status').hidden = false; $('status').textContent = 'Error: ' + (e.message || e); });
 })();
 </script>
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 </body>
 </html>
