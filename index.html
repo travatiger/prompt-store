@@ -99,6 +99,71 @@ footer a{text-decoration:underline}
 @media(max-width:470px){
  .sidebar{width:62px}.main{margin-left:62px;width:calc(100% - 62px)}.brand-mark{width:34px;height:34px}.top-search{max-width:none}.account-btn{display:none}.hero-search{max-width:100%}.hero-search button{padding:10px 15px}.hero h1{font-size:32px;letter-spacing:-1.5px}.hero p{font-size:14px}.section-title h2,.prompt-head h2{font-size:21px}footer{flex-direction:column;padding:20px 15px}
 }
+
+/* Mobile overflow fix */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.main,.content,.hero,.hero-grid,.hero-grid>div{min-width:0;max-width:100%}
+.hero{overflow:hidden}
+.hero h1{overflow-wrap:break-word;word-break:normal}
+.hero-search{width:100%;min-width:0}
+.hero-search input{min-width:0;width:0}
+.stats{min-width:0;max-width:100%}
+
+@media(max-width:720px){
+  .sidebar{
+    left:0;right:0;top:auto;bottom:0;width:100%;height:66px;min-height:66px;
+    padding:7px 8px;display:flex;flex-direction:row;align-items:center;
+    border-right:0;border-top:1px solid var(--line);background:rgba(3,12,28,.97);
+    backdrop-filter:blur(16px)
+  }
+  .brand,.binance-box,.side-sep{display:none}
+  .side-nav{display:flex;align-items:center;justify-content:space-around;width:100%;gap:3px}
+  .side-link{flex:1;justify-content:center;padding:8px 5px;border:0;border-radius:11px}
+  .side-link span:not(.side-icon){display:none}
+  .side-icon{font-size:20px;width:auto}
+  .side-link.active{box-shadow:inset 0 -3px 0 #7752ff;background:#10295d}
+  .main{margin-left:0;width:100%;padding-bottom:70px}
+  .topbar{height:68px;padding:10px 14px}
+  .top-search{width:100%;max-width:none}
+  .top-search input{height:44px}
+  .top-actions{display:none}
+  .content{width:100%;padding:14px 14px 20px}
+  .hero{width:100%;min-height:0;padding:25px 20px;border-radius:18px}
+  .hero-grid{display:block;width:100%}
+  .hero-art{display:none}
+  .hero h1{font-size:clamp(30px,9vw,40px);line-height:1.05;letter-spacing:-1.4px;max-width:100%;white-space:normal}
+  .hero p{font-size:14px;line-height:1.55;max-width:100%}
+  .hero-search{display:flex;width:100%;overflow:hidden}
+  .hero-search input{font-size:14px;padding:10px 9px}
+  .hero-search button{flex:0 0 auto;padding:10px 14px;font-size:12px}
+  .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;width:100%;overflow:hidden}
+  .stat{min-width:0;padding:0 9px}
+  .stat:first-child{padding-left:0}
+  .stat strong{font-size:14px;white-space:nowrap}
+  .stat small{font-size:9px;display:block;white-space:normal}
+  .section{margin-top:25px}
+  .section-title{display:block}
+  .section-title h2{font-size:22px}
+  .filters{width:100%;max-width:100%;overflow-x:auto;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .filter{padding:9px 15px;font-size:12px}
+  .prompt-head{margin-top:24px}
+  .tabs{width:100%;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .type-tab{flex:0 0 auto;font-size:11px;padding:8px 12px}
+  .grid{grid-template-columns:1fr;min-width:0}
+  .card{width:100%;min-width:0}
+  footer{margin-bottom:4px}
+}
+@media(max-width:390px){
+  .content{padding-left:11px;padding-right:11px}
+  .hero{padding:22px 16px}
+  .pill{font-size:10px;padding:6px 10px}
+  .hero h1{font-size:30px}
+  .hero-search button{padding:10px 11px}
+  .stats .stat{padding-left:5px;padding-right:5px}
+  .stats .stat:first-child{padding-left:0}
+}
 </style>
 </head>
 <body>
