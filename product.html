@@ -36,7 +36,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
 #buyMsg{margin-top:12px;font-size:14px;color:#991b1b}
 .state{text-align:center;color:#555;padding:40px 10px}
 .state a{text-decoration:underline}
-.note{margin-top:20px;color:#6b6b75;font-size:13px}.pro-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.fav{border:1px solid #d7d7df;background:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.fav.on{background:#8b45ff;color:#fff;border-color:#8b45ff}.reviews{margin-top:22px;border-top:1px solid #e4e4eb;padding-top:20px}.review-card{padding:12px 0;border-bottom:1px solid #eee}.stars{letter-spacing:2px;color:#f59e0b}.review-form{display:grid;gap:8px;margin-top:12px}.review-form textarea,.review-form select{padding:10px;border:1px solid #d7d7df;border-radius:9px;font:inherit}.related{margin-top:22px;border-top:1px solid #e4e4eb;padding-top:20px}.related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.related-card{border:1px solid #e4e4eb;border-radius:12px;padding:12px;background:#fff}.related-card small{color:#777}@media(max-width:650px){.related-grid{grid-template-columns:1fr}}
+.note{margin-top:20px;color:#6b6b75;font-size:13px}.pro-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.fav{border:1px solid #d7d7df;background:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.fav.on{background:#8b45ff;color:#fff;border-color:#8b45ff}.reviews{margin-top:22px;border-top:1px solid #e4e4eb;padding-top:20px}.review-card{padding:12px 0;border-bottom:1px solid #eee}.stars{letter-spacing:2px;color:#f59e0b}.review-form{display:grid;gap:8px;margin-top:12px}.review-form textarea,.review-form select{padding:10px;border:1px solid #d7d7df;border-radius:9px;font:inherit}.related{margin-top:22px;border-top:1px solid #e4e4eb;padding-top:20px}.related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.related-card{border:1px solid #e4e4eb;border-radius:12px;padding:12px;background:#fff;display:block;text-decoration:none;color:inherit}.related-card small{color:#777}@media(max-width:650px){.related-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.top{flex-direction:column;align-items:flex-start}.visual{width:100%;min-height:220px}.gallery-stage{min-height:220px}.gallery-stage img,.gallery-stage video{max-height:360px}h1{font-size:30px}.product{padding:23px}}
 </style>
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#020817">
@@ -116,6 +116,98 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
   function renderFav(){$('favBtn').textContent=isFav()?'♥ Favorited':'♡ Favorite';$('favBtn').classList.toggle('on',isFav())}
   function stars(n){return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n)}
 
+  /* ---------- reviews ---------- */
+
+  async function loadReviews() {
+    var summaryEl = $('reviewSummary');
+    var listEl = $('reviewList');
+    var formEl = $('reviewForm');
+    try {
+      var r = await PH.db.from('product_reviews')
+        .select('id,user_id,rating,review,created_at')
+        .eq('product_id', product.id)
+        .eq('approved', true)
+        .order('created_at', { ascending: false });
+      if (r.error) throw r.error;
+      var rows = r.data || [];
+
+      if (rows.length) {
+        var avg = rows.reduce(function (s, x) { return s + Number(x.rating); }, 0) / rows.length;
+        summaryEl.textContent = avg.toFixed(1) + ' ' + stars(Math.round(avg)) + ' · ' + rows.length + ' review' + (rows.length === 1 ? '' : 's');
+      } else {
+        summaryEl.textContent = 'No reviews yet — be the first to review this prompt.';
+      }
+
+      listEl.innerHTML = rows.map(function (x) {
+        return '<div class="review-card"><div class="stars">' + stars(Number(x.rating)) + '</div><p>' + PH.esc(x.review) +
+          '</p><small class="muted">' + new Date(x.created_at).toLocaleDateString() + '</small></div>';
+      }).join('');
+
+      var s = await PH.db.auth.getSession();
+      var session = s.data && s.data.session;
+      if (session) {
+        formEl.hidden = false;
+        var mine = rows.filter(function (x) { return x.user_id === session.user.id; })[0];
+        if (mine) {
+          $('reviewRating').value = String(mine.rating);
+          $('reviewText').value = mine.review;
+        }
+      } else {
+        formEl.hidden = true;
+      }
+    } catch (e) {
+      summaryEl.textContent = 'Could not load reviews.';
+    }
+  }
+
+  $('reviewForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var msg = $('reviewMsg');
+    msg.textContent = '';
+    var s = await PH.db.auth.getSession();
+    var session = s.data && s.data.session;
+    if (!session) { msg.textContent = 'Please log in to leave a review.'; return; }
+    var rating = Number($('reviewRating').value);
+    var text = $('reviewText').value.trim();
+    if (text.length < 3) { msg.textContent = 'Review is too short.'; return; }
+    var btn = $('reviewForm').querySelector('button[type=submit]');
+    btn.disabled = true;
+    msg.textContent = 'Sending…';
+    var r = await PH.db.from('product_reviews').upsert(
+      { product_id: product.id, user_id: session.user.id, rating: rating, review: text },
+      { onConflict: 'product_id,user_id' }
+    );
+    btn.disabled = false;
+    if (r.error) { msg.textContent = r.error.message; return; }
+    msg.textContent = 'Thanks! Your review has been posted.';
+    loadReviews();
+  });
+
+  /* ---------- related prompts ---------- */
+
+  async function loadRelated() {
+    var grid = $('relatedGrid');
+    try {
+      var r = await PH.db.from('products')
+        .select('id,name,category,description,price,currency,is_free')
+        .eq('category', product.category)
+        .eq('active', true)
+        .neq('id', product.id)
+        .limit(3);
+      if (r.error) throw r.error;
+      var rows = r.data || [];
+      if (!rows.length) { grid.innerHTML = '<p class="muted">No related prompts yet.</p>'; return; }
+      grid.innerHTML = rows.map(function (p) {
+        var free = !!p.is_free || Number(p.price) === 0;
+        var desc = (p.description || '').slice(0, 80);
+        return '<a class="related-card" href="product.html?id=' + Number(p.id) + '"><b>' + PH.esc(p.name) +
+          '</b><p class="muted" style="margin:6px 0;font-size:13px">' + PH.esc(desc) + '</p><small>' +
+          (free ? 'FREE' : PH.esc(PH.money(p.price, p.currency))) + '</small></a>';
+      }).join('');
+    } catch (e) {
+      grid.innerHTML = '<p class="muted">Could not load related prompts.</p>';
+    }
+  }
 
   function stateMessage(html) {
     $('content').hidden = true;
@@ -245,6 +337,50 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     btn.disabled=true;
   });
 
+  $('favBtn').addEventListener('click', function () { toggleFav(); });
+
+  $('shareBtn').addEventListener('click', async function () {
+    var url = location.href;
+    var text = 'Check out this AI prompt: ' + (product ? product.name : '');
+    if (navigator.share) {
+      try { await navigator.share({ title: product ? product.name : 'PromptHub', text: text, url: url }); return; } catch (e) { /* cancelled or unsupported, fall through */ }
+    }
+    var ok = await PH.copyText(url);
+    var m = $('message');
+    m.textContent = ok ? 'Link copied ✓' : 'Could not copy the link automatically.';
+    setTimeout(function () { m.textContent = ''; }, 2500);
+  });
+
+  $('giftBtn').addEventListener('click', async function () {
+    var url = location.href;
+    var text = '🎁 I\'m gifting you this AI prompt: ' + (product ? product.name : '') + '\n' + url;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'A prompt for you', text: text }); return; } catch (e) { /* cancelled or unsupported, fall through */ }
+    }
+    var ok = await PH.copyText(text);
+    var m = $('message');
+    m.textContent = ok ? 'Gift message copied ✓ Paste it anywhere to send.' : 'Could not copy automatically. Please copy the link manually.';
+    setTimeout(function () { m.textContent = ''; }, 3000);
+  });
+
+  $('exportBtn').addEventListener('click', function () {
+    var m = $('message');
+    if (!promptText) {
+      m.textContent = 'Unlock this prompt first to export it.';
+      setTimeout(function () { m.textContent = ''; }, 2500);
+      return;
+    }
+    var blob = new Blob([promptText], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (product && product.name ? product.name.replace(/[^\w\-]+/g, '_') : 'prompt') + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
   $('copyBtn').addEventListener('click', async function () {
     var ok = await PH.copyText(promptText);
     var m = $('message');
@@ -275,6 +411,9 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     }
     product._media = galleryItems;
     PH.db.rpc('record_product_view',{p_product_id:product.id}).catch(function(){});
+    PH.db.rpc('get_public_product_stats',{p_ids:[product.id]}).then(function(sr){
+      if (!sr.error && sr.data && sr.data[0]) $('viewCount').textContent = '👁 ' + Number(sr.data[0].views_count||0) + ' views';
+    }).catch(function(){});
     loadReviews(); loadRelated();
     renderProduct();
 

@@ -388,7 +388,20 @@ async function load(){
   var r=await fetch(url,{headers:{apikey:SUPABASE_KEY,Accept:'application/json'},cache:'no-store'});
   var body=await r.text();if(!r.ok)throw new Error('HTTP '+r.status);
   products=JSON.parse(body);
-  if(products.length){var ids=products.map(function(p){return Number(p.id)}).join(',');var mr=await fetch(SUPABASE_URL+'/rest/v1/product_media?select=id,product_id,media_type,media_url,sort_order&product_id=in.('+ids+')&order=sort_order.asc,id.asc',{headers:{apikey:SUPABASE_KEY,Accept:'application/json'},cache:'no-store'});if(mr.ok){var mediaRows=await mr.json();products.forEach(function(p){p._media=mediaRows.filter(function(m){return Number(m.product_id)===Number(p.id)});});}}
+  if(products.length){
+   var idList=products.map(function(p){return Number(p.id)});
+   var mr=await fetch(SUPABASE_URL+'/rest/v1/product_media?select=id,product_id,media_type,media_url,sort_order&product_id=in.('+idList.join(',')+')&order=sort_order.asc,id.asc',{headers:{apikey:SUPABASE_KEY,Accept:'application/json'},cache:'no-store'});
+   if(mr.ok){var mediaRows=await mr.json();products.forEach(function(p){p._media=mediaRows.filter(function(m){return Number(m.product_id)===Number(p.id)});});}
+   try{
+    var sr=await fetch(SUPABASE_URL+'/rest/v1/rpc/get_public_product_stats',{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({p_ids:idList}),cache:'no-store'});
+    if(sr.ok){
+     var statsRows=await sr.json();
+     var statsMap={};
+     statsRows.forEach(function(s){statsMap[Number(s.product_id)]={views:Number(s.views_count||0),rating:Number(s.avg_rating||0)};});
+     products.forEach(function(p){var s=statsMap[Number(p.id)];p.views=s?s.views:0;p.rating=s?s.rating:0;});
+    }
+   }catch(e){}
+  }
   $('statCount').textContent=products.length+'+';
   $('status').hidden=true;render();
  }catch(e){
