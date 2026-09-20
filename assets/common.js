@@ -15,8 +15,6 @@
   var CATEGORIES = {
     image: { label: 'AI Images', icon: '🖼️' },
     video: { label: 'AI Video', icon: '🎬' },
-    youtube: { label: 'YouTube', icon: '▶️' },
-    business: { label: 'Business', icon: '💼' }
   };
 
   function esc(x) {
