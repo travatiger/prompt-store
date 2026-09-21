@@ -163,7 +163,21 @@ tr:hover td{background:rgba(232,163,61,.05)}
 body,.container,.content,.main{background:var(--ink) !important}
 hr{border-color:var(--line) !important}
 
-/* ---------- scrollbar (cosmetic, non-breaking) ---------- */
+/* ---------- profile photo / cover upload ---------- */
+.profile-media-row{position:relative;margin:-18px -18px 46px}
+.cover-box{position:relative;width:100%;height:150px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;overflow:hidden;background:var(--panel-2)}
+.cover-img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar-box{position:absolute;left:20px;bottom:-38px}
+.avatar-img{width:84px;height:84px;border-radius:50%;object-fit:cover;border:4px solid var(--panel);background:var(--panel-2);display:block}
+.upload-chip{position:absolute;bottom:8px;right:8px;background:rgba(11,12,22,.75) !important;color:var(--text) !important;border:1px solid var(--line) !important;border-radius:999px !important;padding:5px 12px !important;font-size:12px !important;font-weight:600;cursor:pointer}
+.avatar-box .upload-chip{right:auto;left:50%;transform:translateX(-50%);bottom:-8px;font-size:10px !important;padding:3px 8px !important;white-space:nowrap}
+.hello-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;margin-right:10px;border:2px solid var(--line);vertical-align:middle}
+.head{display:flex;align-items:center;gap:0;flex-wrap:wrap}
+.head h1{display:inline-flex;align-items:center;gap:10px}
+
+.side-icon svg{width:20px;height:20px;display:block;color:var(--mute)}
+.side-link.active .side-icon svg,.side-link:hover .side-icon svg{color:var(--ember)}
+
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-track{background:var(--ink)}
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
