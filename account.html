@@ -114,7 +114,12 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
 </div>
 
 <div id="pane-orders"><div id="ordersList"></div></div>
-<div id="pane-profile" hidden><div class="card"><h2>My Profile</h2><label>Full name</label><input id="profileName" maxlength="120"><label>Username</label><input id="profileUsername" maxlength="32" placeholder="Your public username"><label>Avatar URL</label><input id="profileAvatar" placeholder="https://..."><label>Bio</label><textarea id="profileBio" maxlength="1000"></textarea><label>Website</label><input id="profileWebsite" placeholder="https://..."><label>Binance Pay account / UID</label><input id="profilePayout" placeholder="Used only for seller payouts"><button class="btn" id="saveProfile" type="button">Save Profile</button><div id="profileMsg" class="msg"></div></div></div>
+<div id="pane-profile" hidden><div class="card">
+<div class="profile-media-row">
+  <div class="cover-box"><img id="coverPreview" class="cover-img" alt=""><label class="upload-chip" for="coverFile">Change Cover</label><input type="file" id="coverFile" accept="image/*" hidden></div>
+  <div class="avatar-box"><img id="avatarPreview" class="avatar-img" alt=""><label class="upload-chip small" for="avatarFile">Change Photo</label><input type="file" id="avatarFile" accept="image/*" hidden></div>
+</div>
+<h2>My Profile</h2><label>Full name</label><input id="profileName" maxlength="120"><label>Username</label><input id="profileUsername" maxlength="32" placeholder="Your public username"><label>Bio</label><textarea id="profileBio" maxlength="1000"></textarea><label>Website</label><input id="profileWebsite" placeholder="https://..."><label>Binance Pay account / UID</label><input id="profilePayout" placeholder="Used only for seller payouts"><button class="btn" id="saveProfile" type="button">Save Profile</button><div id="profileMsg" class="msg"></div></div></div>
 <div id="pane-sell" hidden><div class="card"><h2>Sell Your Prompts</h2><p class="muted">Create your seller profile and submit prompts for administrator review. Your listings will not appear publicly until approved.</p><label>Store username</label><input id="sellUsername" maxlength="32" placeholder="e.g. creativehub"><label>Seller bio</label><textarea id="sellBio" maxlength="1000"></textarea><label>Website</label><input id="sellWebsite" placeholder="https://..."><label>Application message</label><textarea id="sellMessage" maxlength="2000" placeholder="Tell the admin about your prompts..."></textarea><button class="btn" id="applySeller" type="button">Apply to Become a Seller</button><div id="sellerMsg" class="msg"></div><p style="margin-top:12px"><a class="btn" href="seller.html">Open Seller Dashboard</a></p></div></div>
 
 <div id="pane-prompts" hidden><div id="promptsList"></div></div>
@@ -243,8 +248,13 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
     var n = safeNext();
     if (n) { location.replace(n); return; }
     me = user;
-    var p = await db.from('profiles').select('full_name,role').eq('id', user.id).maybeSingle();
+    var p = await db.from('profiles').select('full_name,role,avatar_url').eq('id', user.id).maybeSingle();
     var name = (p.data && p.data.full_name) || user.email || 'there';
+    if (p.data && p.data.avatar_url) {
+      var av = document.createElement('img');
+      av.src = p.data.avatar_url; av.alt = ''; av.className = 'hello-avatar';
+      $('hello').insertAdjacentElement('beforebegin', av);
+    }
     $('hello').textContent = 'Hi, ' + name;
     if (p.data && p.data.role === 'admin') {
       var adminLink = document.createElement('a');
@@ -407,16 +417,40 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
     setTimeout(function () { b.textContent = 'Copy'; }, 1800);
   });
 
+  var DEFAULT_AVATAR='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%231B1F3B"/><circle cx="50" cy="38" r="18" fill="%232A2F52"/><path d="M15 92c6-22 24-34 35-34s29 12 35 34" fill="%232A2F52"/></svg>';
+  var DEFAULT_COVER='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160"><rect width="600" height="160" fill="%2314172A"/></svg>';
+
   async function loadProfilePanel() {
-    var r = await db.from('profiles').select('full_name,username,avatar_url,bio,website_url,payout_account,seller_status').eq('id', me.id).maybeSingle();
+    var r = await db.from('profiles').select('full_name,username,avatar_url,cover_url,bio,website_url,payout_account,seller_status').eq('id', me.id).maybeSingle();
     if (r.error || !r.data) return;
-    $('profileName').value=r.data.full_name||''; $('profileUsername').value=r.data.username||''; $('profileAvatar').value=r.data.avatar_url||''; $('profileBio').value=r.data.bio||''; $('profileWebsite').value=r.data.website_url||''; $('profilePayout').value=r.data.payout_account||'';
+    $('profileName').value=r.data.full_name||''; $('profileUsername').value=r.data.username||''; $('profileBio').value=r.data.bio||''; $('profileWebsite').value=r.data.website_url||''; $('profilePayout').value=r.data.payout_account||'';
+    $('avatarPreview').src=r.data.avatar_url||DEFAULT_AVATAR; $('coverPreview').src=r.data.cover_url||DEFAULT_COVER;
     $('sellUsername').value=r.data.username||''; $('sellBio').value=r.data.bio||''; $('sellWebsite').value=r.data.website_url||'';
     if (r.data.seller_status==='approved') $('sellerMsg').textContent='Seller approved. Use the Seller Dashboard to manage your store.';
     else if (r.data.seller_status==='pending') $('sellerMsg').textContent='Seller application is pending admin review.';
     else if (r.data.seller_status==='rejected') $('sellerMsg').textContent='Seller application was rejected. You may submit an updated application.';
   }
-  $('saveProfile').addEventListener('click', async function(){ var r=await db.from('profiles').update({full_name:$('profileName').value.trim(),username:$('profileUsername').value.trim()||null,avatar_url:$('profileAvatar').value.trim()||null,bio:$('profileBio').value,website_url:$('profileWebsite').value.trim(),payout_account:$('profilePayout').value.trim()}).eq('id',me.id); setMsg($('profileMsg'),r.error?r.error.message:'Profile saved ✓',r.error?'err':'ok'); });
+
+  async function uploadProfileImage(file, kind) {
+    if (!file) return;
+    if (file.size > 5*1024*1024) { setMsg($('profileMsg'),'Image must be under 5MB','err'); return; }
+    var ext = (file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+    var path = 'avatars/'+me.id+'/'+kind+'-'+Date.now()+'.'+ext;
+    setMsg($('profileMsg'),'Uploading...','');
+    var up = await db.storage.from('product-media').upload(path, file, {cacheControl:'3600', upsert:false, contentType:file.type||undefined});
+    if (up.error) { setMsg($('profileMsg'),'Upload failed: '+up.error.message,'err'); return; }
+    var url = db.storage.from('product-media').getPublicUrl(path).data.publicUrl;
+    var field = kind==='avatar' ? 'avatar_url' : 'cover_url';
+    var upd = {}; upd[field]=url;
+    var r = await db.from('profiles').update(upd).eq('id', me.id);
+    if (r.error) { setMsg($('profileMsg'),r.error.message,'err'); return; }
+    $(kind==='avatar'?'avatarPreview':'coverPreview').src = url;
+    setMsg($('profileMsg'), (kind==='avatar'?'Photo':'Cover photo')+' updated ✓','ok');
+  }
+  $('avatarFile').addEventListener('change', function(e){ uploadProfileImage(e.target.files[0],'avatar'); e.target.value=''; });
+  $('coverFile').addEventListener('change', function(e){ uploadProfileImage(e.target.files[0],'cover'); e.target.value=''; });
+
+  $('saveProfile').addEventListener('click', async function(){ var r=await db.from('profiles').update({full_name:$('profileName').value.trim(),username:$('profileUsername').value.trim()||null,bio:$('profileBio').value,website_url:$('profileWebsite').value.trim(),payout_account:$('profilePayout').value.trim()}).eq('id',me.id); setMsg($('profileMsg'),r.error?r.error.message:'Profile saved ✓',r.error?'err':'ok'); });
   $('applySeller').addEventListener('click', async function(){ var r=await db.rpc('apply_as_seller',{p_username:$('sellUsername').value.trim(),p_bio:$('sellBio').value,p_message:$('sellMessage').value,p_website_url:$('sellWebsite').value.trim()}); setMsg($('sellerMsg'),r.error?r.error.message:'Application submitted ✓ Waiting for admin review.',r.error?'err':'ok'); });
 
   /* ---------- chat ---------- */

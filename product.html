@@ -252,7 +252,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     galleryIndex = 0;
     renderGallery();
     $('category').textContent = c.label;
-    $('title').textContent = product.name; var sp=product.profiles; $('sellerBy').innerHTML=sp&&sp.username?('Sold by <a href="seller-profile.html?username='+encodeURIComponent(sp.username)+'" style="text-decoration:underline;color:#7b61ff">@'+PH.esc(sp.username)+'</a>'):'';
+    $('title').textContent = product.name; var sp=product.profiles; $('sellerBy').innerHTML=sp&&sp.username?((sp.avatar_url?'<img src="'+PH.esc(sp.avatar_url)+'" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px">':'')+'Sold by <a href="seller-profile.html?username='+encodeURIComponent(sp.username)+'" style="text-decoration:underline;color:#7b61ff">@'+PH.esc(sp.username)+'</a>'):'';
     $('description').textContent = product.description;
     var isFree = !!product.is_free || Number(product.price) === 0;
     $('price').innerHTML = isFree ? '<span class="free-label">FREE</span>' : PH.esc(PH.money(product.price, product.currency));
@@ -395,7 +395,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     if (!/^\d{1,12}$/.test(id || '')) { notFound(); return; }
 
     var results = await Promise.all([
-      PH.db.from('products').select('id,name,category,description,price,currency,is_free,image_url,video_url,seller_id,profiles!products_seller_id_profiles_fkey(username,full_name)').eq('id', Number(id)).maybeSingle(),
+      PH.db.from('products').select('id,name,category,description,price,currency,is_free,image_url,video_url,seller_id,profiles!products_seller_id_profiles_fkey(username,full_name,avatar_url)').eq('id', Number(id)).maybeSingle(),
       PH.db.from('product_media').select('id,media_type,media_url,sort_order').eq('product_id', Number(id)).order('sort_order', { ascending: true }).order('id', { ascending: true })
     ]);
     var r = results[0], mr = results[1];
