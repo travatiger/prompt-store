@@ -410,7 +410,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
       if (product.video_url) galleryItems.push({id:'legacy-video',media_type:'video',media_url:product.video_url,sort_order:1});
     }
     product._media = galleryItems;
-    PH.db.rpc('record_product_view',{p_product_id:product.id}).catch(function(){});
+    PH.db.rpc('record_product_view',{p_product_id:product.id}).then(function(){}, function(){});
     PH.db.rpc('get_public_product_stats',{p_ids:[product.id]}).then(function(sr){
       if (!sr.error && sr.data && sr.data[0]) $('viewCount').textContent = '👁 ' + Number(sr.data[0].views_count||0) + ' views';
     }).catch(function(){});
