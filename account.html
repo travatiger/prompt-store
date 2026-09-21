@@ -243,9 +243,17 @@ pre.prompt{background:#17171c;color:#ddd;border-radius:10px;padding:16px;font-si
     var n = safeNext();
     if (n) { location.replace(n); return; }
     me = user;
-    var p = await db.from('profiles').select('full_name').eq('id', user.id).maybeSingle();
+    var p = await db.from('profiles').select('full_name,role').eq('id', user.id).maybeSingle();
     var name = (p.data && p.data.full_name) || user.email || 'there';
     $('hello').textContent = 'Hi, ' + name;
+    if (p.data && p.data.role === 'admin') {
+      var adminLink = document.createElement('a');
+      adminLink.href = 'admin.html';
+      adminLink.className = 'btn ghost';
+      adminLink.textContent = '🔐 Admin Panel';
+      adminLink.style.marginRight = '8px';
+      $('logout').insertAdjacentElement('beforebegin', adminLink);
+    }
     showView('dash');
     var h = location.hash.replace('#', '');
     selectTab(['orders', 'prompts', 'favorites', 'notifications', 'pro', 'chat', 'profile', 'sell'].indexOf(h) !== -1 ? h : 'orders');
