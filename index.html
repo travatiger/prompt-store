@@ -179,6 +179,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 }
 </style>
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#020817"><link rel="stylesheet" href="assets/theme.css">
+<link rel="stylesheet" href="assets/redesign.css">
 </head>
 <body>
 <div class="layout">
@@ -204,6 +205,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 
 <div class="main">
 <header class="topbar">
+  <button id="mobileMenuBtn" class="mobile-menu" type="button" aria-label="Open menu">☰</button>
   <div class="top-search">
     <span class="search-icon">⌕</span>
     <input id="topSearch" type="search" placeholder="Search prompts..." aria-label="Search prompts">
@@ -432,5 +434,11 @@ load();
 })();
 </script>
 <script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
+<script>
+(function(){
+  var b=document.getElementById('mobileMenuBtn'), sb=document.querySelector('.sidebar');
+  if(b&&sb){b.addEventListener('click',function(){sb.classList.toggle('open')})}
+})();
+</script>
 </body>
 </html>
