@@ -395,7 +395,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     if (!/^\d{1,12}$/.test(id || '')) { notFound(); return; }
 
     var results = await Promise.all([
-      PH.db.from('products').select('id,name,category,description,price,currency,is_free,image_url,video_url,seller_id,profiles(username,full_name)').eq('id', Number(id)).maybeSingle(),
+      PH.db.from('products').select('id,name,category,description,price,currency,is_free,image_url,video_url,seller_id,profiles!products_seller_id_profiles_fkey(username,full_name)').eq('id', Number(id)).maybeSingle(),
       PH.db.from('product_media').select('id,media_type,media_url,sort_order').eq('product_id', Number(id)).order('sort_order', { ascending: true }).order('id', { ascending: true })
     ]);
     var r = results[0], mr = results[1];
