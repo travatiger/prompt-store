@@ -426,7 +426,7 @@ h1{font-size:38px;line-height:1.15;margin:7px 0}
     showBuy(loggedIn);
   }
 
-  init();
+  init().catch(function (e) { stateMessage('Something went wrong: ' + PH.esc((e && e.message) || String(e)) + ' <a href="index.html">Back to the store</a>'); });
 })();
 </script>
 <script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>

@@ -7,6 +7,8 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/common.js"></script><script>
 (async()=>{
+try{
+if(PH.initError){profileHead.textContent='Could not start: '+PH.initError.message;return}
 var DEFAULT_AVATAR='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%231B1F3B"/><circle cx="50" cy="38" r="18" fill="%232A2F52"/><path d="M15 92c6-22 24-34 35-34s29 12 35 34" fill="%232A2F52"/></svg>';
 var DEFAULT_COVER='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160"><rect width="600" height="160" fill="%2314172A"/></svg>';
 var u=new URLSearchParams(location.search).get('username');
@@ -19,5 +21,6 @@ profileHead.innerHTML='<img class="avatar" src="'+PH.esc(x.avatar_url||DEFAULT_A
 if(x.bio||x.website_url){bioCard.hidden=false;bioCard.innerHTML='<p>'+PH.esc(x.bio||'')+'</p>'+(x.website_url?'<a href="'+PH.esc(x.website_url)+'" target="_blank" rel="noopener">Website</a>':'');}
 var q=await PH.db.from('products').select('id,name,category,description,price,currency,is_free,image_url').eq('seller_id',x.id).eq('approval_status','approved').eq('active',true).order('created_at',{ascending:false});
 products.innerHTML=(q.data||[]).map(p=>'<a class="item" href="product.html?id='+p.id+'">'+(p.image_url?'<img src="'+PH.esc(p.image_url)+'">':'')+'<h3>'+PH.esc(p.name)+'</h3><div class="muted">'+PH.esc(p.category)+' · '+(p.is_free?'FREE':PH.esc(PH.money(p.price,p.currency)))+'</div><p class="muted">'+PH.esc(p.description||'')+'</p></a>').join('')||'<p class="muted">No published prompts yet.</p>'
+}catch(e){profileHead.textContent='Something went wrong: '+((e&&e.message)||String(e))}
 })()
 </script></body></html>
