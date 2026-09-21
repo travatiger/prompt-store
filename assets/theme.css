@@ -1,0 +1,169 @@
+/* =====================================================================
+   PromptHub — shared theme
+   A digital bazaar for AI prompts: deep indigo-ink base, warm marigold
+   accent for value/CTAs, teal for "live/paid", a serif display face for
+   headings and stat numbers so it reads as a crafted marketplace rather
+   than a generic SaaS dashboard.
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root{
+  --ink:#0B0C16;
+  --panel:#14172A;
+  --panel-2:#1B1F3B;
+  --line:#2A2F52;
+  --text:#ECEAF6;
+  --mute:#8D90B8;
+  --ember:#E8A33D;
+  --ember-ink:#3A2A08;
+  --signal:#58C7A3;
+  --alarm:#E8607A;
+  --radius-lg:16px;
+  --radius-md:12px;
+  --radius-sm:8px;
+  --shadow:0 10px 30px -12px rgba(0,0,0,.55);
+}
+
+/* ---------- base ---------- */
+html body{
+  background:var(--ink) !important;
+  color:var(--text) !important;
+  font-family:'Manrope',system-ui,-apple-system,sans-serif !important;
+}
+h1,h2,h3,.brand,.logo{
+  font-family:'Fraunces',Georgia,serif !important;
+  font-weight:600 !important;
+  letter-spacing:-.01em;
+}
+h1{font-size:clamp(28px,4vw,42px) !important}
+h2{font-size:22px !important}
+a{color:var(--ember)}
+::selection{background:var(--ember);color:var(--ember-ink)}
+
+/* ---------- cards / panels ---------- */
+.card,.ai-card,.binance-box,.binance-pay-box,.login,.related-card,.review-card,.buy-box,section#dash .card,.chatbox,.instr{
+  background:var(--panel) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--radius-lg) !important;
+  box-shadow:var(--shadow) !important;
+  color:var(--text) !important;
+}
+.wrap>.card,.container>.card{margin-bottom:16px}
+
+/* ---------- buttons ---------- */
+button,.btn,.blue,input[type="submit"]{
+  font-family:'Manrope',sans-serif !important;
+  border-radius:999px !important;
+  font-weight:700 !important;
+  letter-spacing:0;
+  transition:transform .12s ease, filter .12s ease;
+}
+button:not(.gray):not(.red):not(.green):not(.ghost),
+.btn:not(.gray):not(.red):not(.green):not(.ghost),
+.blue,
+button[class*="green"]:not(.card){
+  background:var(--ember) !important;
+  color:var(--ember-ink) !important;
+  border:none !important;
+}
+button:hover:not(:disabled),.btn:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.gray,.btn.gray,.ghost,.btn.ghost{
+  background:transparent !important;
+  color:var(--text) !important;
+  border:1px solid var(--line) !important;
+}
+.green{background:var(--signal) !important;color:#062A20 !important;border:none !important}
+.red{background:transparent !important;color:var(--alarm) !important;border:1px solid var(--alarm) !important}
+button:disabled{opacity:.5;filter:none;transform:none}
+
+/* ---------- inputs ---------- */
+input,select,textarea{
+  background:var(--panel-2) !important;
+  border:1px solid var(--line) !important;
+  color:var(--text) !important;
+  border-radius:var(--radius-sm) !important;
+  font-family:'Manrope',sans-serif !important;
+}
+input::placeholder,textarea::placeholder{color:var(--mute) !important}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--ember) !important;outline-offset:1px}
+label{color:var(--mute) !important;font-size:13px !important}
+
+/* ---------- tabs ---------- */
+.tabs{border-bottom:1px solid var(--line) !important;gap:4px !important}
+.tab,.tabs button,.seg button{
+  background:transparent !important;
+  color:var(--mute) !important;
+  border:none !important;
+  border-radius:var(--radius-sm) var(--radius-sm) 0 0 !important;
+  font-weight:600 !important;
+}
+.tab.active,.tabs button.active,.tabs button.on,.seg button.on{
+  background:var(--panel-2) !important;
+  color:var(--ember) !important;
+  box-shadow:inset 0 -2px 0 var(--ember) !important;
+}
+
+/* ---------- stats ---------- */
+.stat,.stats .stat{
+  background:var(--panel) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--radius-md) !important;
+}
+.stat b,.stat .num,.num{
+  font-family:'Fraunces',serif !important;
+  font-size:28px !important;
+  color:var(--ember) !important;
+  font-weight:600 !important;
+}
+.stat span,.stat .muted{color:var(--mute) !important}
+
+/* ---------- tables ---------- */
+table{border-collapse:collapse !important;width:100%}
+.table,table{background:var(--panel) !important;border-radius:var(--radius-md) !important;overflow:hidden}
+th{
+  background:var(--panel-2) !important;
+  color:var(--mute) !important;
+  font-size:12px !important;
+  text-transform:none !important;
+  text-align:left;
+  padding:10px 12px !important;
+  border-bottom:1px solid var(--line) !important;
+}
+td{padding:10px 12px !important;border-bottom:1px solid var(--line) !important;color:var(--text) !important}
+tr:last-child td{border-bottom:none !important}
+tr:hover td{background:rgba(232,163,61,.05)}
+
+/* ---------- status text / badges ---------- */
+.ok,.msg.ok{color:var(--signal) !important}
+.bad,.err,.msg.err{color:var(--alarm) !important}
+.muted{color:var(--mute) !important}
+.badge,.pill,.featured-badge,.free-label{
+  background:var(--panel-2) !important;
+  border:1px solid var(--line) !important;
+  color:var(--text) !important;
+  border-radius:999px !important;
+  font-weight:600 !important;
+}
+.price{color:var(--ember) !important;font-family:'Fraunces',serif !important;font-weight:600 !important}
+
+/* ---------- nav / header (index.html + account/seller/product/seller-profile) ---------- */
+.sidebar,.side-nav{background:var(--panel) !important;border-right:1px solid var(--line) !important}
+.side-link{color:var(--mute) !important;border-radius:var(--radius-sm) !important}
+.side-link.active,.side-link:hover{background:var(--panel-2) !important;color:var(--ember) !important}
+.topbar,.top,.nav,.nav-inner{background:var(--ink) !important;border-bottom:1px solid var(--line) !important}
+.account-btn{background:var(--panel-2) !important;color:var(--text) !important;border:1px solid var(--line) !important;border-radius:999px !important}
+.brand-mark{background:var(--ember) !important;color:var(--ember-ink) !important}
+
+/* ---------- chat bubbles ---------- */
+.bubble.mine{background:var(--ember) !important;color:var(--ember-ink) !important}
+.bubble.theirs{background:var(--panel-2) !important;color:var(--text) !important}
+
+/* ---------- misc surfaces ---------- */
+body,.container,.content,.main{background:var(--ink) !important}
+hr{border-color:var(--line) !important}
+
+/* ---------- scrollbar (cosmetic, non-breaking) ---------- */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--ink)}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
