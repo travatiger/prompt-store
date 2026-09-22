@@ -3,7 +3,7 @@
   "short_name":"PromptHub",
   "start_url":"index.html",
   "display":"standalone",
-  "background_color":"#050914",
+  "background_color":"#020817",
   "theme_color":"#5269ff",
   "description":"AI prompt marketplace for image and video prompts."
 }
