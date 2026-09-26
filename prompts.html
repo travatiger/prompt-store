@@ -195,10 +195,17 @@ function formMsg(t,k){$('formMsg').textContent=t||'';$('formMsg').className='msg
 function formMsgTop(t,k){$('status').hidden=false;$('status').textContent=t;$('status').className='card status '+(k||'')}
 
 /* ---------- load list ---------- */
+var myLikes=new Set(),commentsCache={},openComments=new Set(),viewedThisLoad=new Set();
 async function loadList(){
-  var r=await db.from('prompts').select('id,user_id,title,category,body,media_url,website_url,website_image_url,created_at,profiles(username,full_name,avatar_url)').order('created_at',{ascending:false});
+  var r=await db.from('prompts').select('id,user_id,title,category,body,media_url,website_url,website_image_url,views_count,likes_count,comments_count,created_at,profiles(username,full_name,avatar_url)').order('created_at',{ascending:false});
   if(r.error){$('status').hidden=false;$('status').textContent='Could not load prompts: '+r.error.message;return}
-  all=r.data||[];render();
+  all=r.data||[];await loadMyLikes();render();
+}
+async function loadMyLikes(){
+  myLikes=new Set();
+  if(!me)return;
+  var r=await db.from('prompt_likes').select('prompt_id').eq('user_id',me.id);
+  if(!r.error&&r.data)r.data.forEach(x=>myLikes.add(x.prompt_id));
 }
 function render(){
   var list=activeCat==='all'?all:all.filter(p=>p.category===activeCat);
@@ -206,6 +213,22 @@ function render(){
   if(!list.length){$('status').hidden=false;$('status').className='card status';$('status').textContent='No prompts here yet.';$('grid').hidden=true;return}
   $('grid').hidden=false;
   $('grid').innerHTML=list.map(cardHtml).join('');
+  list.forEach(p=>markViewed(p.id));
+}
+function markViewed(id){
+  if(viewedThisLoad.has(id))return;
+  viewedThisLoad.add(id);
+  var key='ph-viewed-'+id;
+  if(localStorage.getItem(key))return;
+  localStorage.setItem(key,'1');
+  db.rpc('increment_prompt_view',{p_id:id}).then(function(){
+    var p=all.find(x=>x.id===id);if(p)p.views_count=(p.views_count||0)+1;
+  }).catch(function(){});
+}
+function heartIcon(filled){
+  return filled
+    ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.3-9.3-8.2C1 10 1.7 6.6 4.6 5.1 7 3.9 9.6 4.8 12 7.4c2.4-2.6 5-3.5 7.4-2.3 2.9 1.5 3.6 4.9 1.9 7.7C18.7 16.7 12 21 12 21z"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6.7-4.3-9.3-8.2C1 10 1.7 6.6 4.6 5.1 7 3.9 9.6 4.8 12 7.4c2.4-2.6 5-3.5 7.4-2.3 2.9 1.5 3.6 4.9 1.9 7.7C18.7 16.7 12 21 12 21z"/></svg>';
 }
 function cardHtml(p){
   var mine=me&&p.user_id===me.id;
@@ -218,6 +241,14 @@ function cardHtml(p){
   else if(p.category==='website')media='<div class="p-site">'+(p.website_image_url?'<img src="'+esc(p.website_image_url)+'" alt="">':'')+'<span>'+esc(p.website_url||'')+'</span></div>';
   var actions='<button class="btn" data-copy="'+p.id+'" type="button">Copy</button>';
   if(mine)actions+='<button class="btn" data-edit="'+p.id+'" type="button">Edit</button><button class="btn" data-del="'+p.id+'" type="button">Delete</button>';
+  var liked=myLikes.has(p.id);
+  var stats='<div class="p-stats">'+
+    '<button class="icon-btn'+(liked?' liked':'')+'" data-like="'+p.id+'" type="button">'+heartIcon(liked)+'<span>'+(p.likes_count||0)+'</span></button>'+
+    '<button class="icon-btn" data-comments-toggle="'+p.id+'" type="button">💬<span>'+(p.comments_count||0)+'</span></button>'+
+    '<button class="icon-btn" data-share="'+p.id+'" type="button">🔗<span>Share</span></button>'+
+    '<span class="views-note">'+(p.views_count||0)+' views</span>'+
+    '</div>';
+  var commentsHtml=openComments.has(p.id)?commentsPanelHtml(p.id):'';
   return '<article class="card prompt-card">'+
     '<div class="p-top"><span class="badge">'+CAT_LABEL[p.category]+'</span>'+
     '<div class="p-author"><img src="'+esc(avatar)+'" alt="">'+esc(author.username?('@'+author.username):(author.full_name||'User'))+'</div></div>'+
@@ -225,17 +256,103 @@ function cardHtml(p){
     '<p class="p-body">'+esc(p.body)+'</p>'+
     media+
     '<div class="p-actions">'+actions+'</div>'+
+    stats+
+    commentsHtml+
     '</article>';
+}
+function commentsPanelHtml(id){
+  var list=commentsCache[id];
+  var body=!list?'<div class="comment-loading">Loading comments…</div>':
+    (list.length?list.map(commentItemHtml).join(''):'<div class="comment-loading">No comments yet.</div>');
+  var form=me?'<div class="comment-form"><input type="text" maxlength="500" placeholder="Write a comment…" data-comment-input="'+id+'"><button class="btn primary" data-post-comment="'+id+'" type="button">Post</button></div>'
+    :'<div class="comment-loading">Login from My Profile to comment.</div>';
+  return '<div class="comments-panel" data-panel="'+id+'">'+body+form+'</div>';
+}
+function commentItemHtml(c){
+  var author=c.profiles||{};
+  var avatar=author.avatar_url||'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
+  var mine=me&&c.user_id===me.id;
+  return '<div class="comment-item"><img src="'+esc(avatar)+'" alt=""><div><b>'+esc(author.username?('@'+author.username):(author.full_name||'User'))+'</b> '+esc(c.body)+'</div>'+
+    (mine?'<button class="c-del" data-del-comment="'+c.id+'" data-comment-prompt="'+c.prompt_id+'" type="button">Delete</button>':'')+
+    '</div>';
+}
+async function loadComments(id){
+  var r=await db.from('prompt_comments').select('id,prompt_id,user_id,body,created_at,profiles(username,full_name,avatar_url)').eq('prompt_id',id).order('created_at',{ascending:true});
+  commentsCache[id]=r.error?[]:(r.data||[]);
+  render();
 }
 
 $('grid').addEventListener('click',async function(e){
   var copyBtn=e.target.closest('[data-copy]');
   var editBtn=e.target.closest('[data-edit]');
   var delBtn=e.target.closest('[data-del]');
+  var likeBtn=e.target.closest('[data-like]');
+  var commentsToggleBtn=e.target.closest('[data-comments-toggle]');
+  var shareBtn=e.target.closest('[data-share]');
+  var postBtn=e.target.closest('[data-post-comment]');
+  var delCommentBtn=e.target.closest('[data-del-comment]');
+
   if(copyBtn){var p=all.find(x=>x.id===copyBtn.getAttribute('data-copy'));if(p){await PH.copyText(p.body);copyBtn.textContent='Copied ✓';setTimeout(()=>copyBtn.textContent='Copy',1200)}}
   if(editBtn){startEdit(editBtn.getAttribute('data-edit'))}
   if(delBtn){doDelete(delBtn.getAttribute('data-del'))}
+  if(likeBtn){toggleLike(likeBtn.getAttribute('data-like'))}
+  if(commentsToggleBtn){
+    var id=commentsToggleBtn.getAttribute('data-comments-toggle');
+    if(openComments.has(id)){openComments.delete(id);render()}
+    else{openComments.add(id);render();if(!commentsCache[id])loadComments(id)}
+  }
+  if(shareBtn){sharePrompt(shareBtn.getAttribute('data-share'))}
+  if(postBtn){
+    var pid=postBtn.getAttribute('data-post-comment');
+    var input=document.querySelector('[data-comment-input="'+pid+'"]');
+    postComment(pid,input?input.value:'');
+  }
+  if(delCommentBtn){deleteComment(delCommentBtn.getAttribute('data-del-comment'),delCommentBtn.getAttribute('data-comment-prompt'))}
 });
+
+async function toggleLike(id){
+  if(!me){formMsgTop('Please login from My Profile to like a prompt.','err');return}
+  var p=all.find(x=>x.id===id);if(!p)return;
+  var wasLiked=myLikes.has(id);
+  if(wasLiked){myLikes.delete(id);p.likes_count=Math.max((p.likes_count||1)-1,0)}
+  else{myLikes.add(id);p.likes_count=(p.likes_count||0)+1}
+  render();
+  var r=wasLiked?await db.from('prompt_likes').delete().eq('prompt_id',id).eq('user_id',me.id)
+               :await db.from('prompt_likes').insert({prompt_id:id,user_id:me.id});
+  if(r.error){
+    if(wasLiked){myLikes.add(id);p.likes_count=(p.likes_count||0)+1}else{myLikes.delete(id);p.likes_count=Math.max((p.likes_count||1)-1,0)}
+    render();
+  }
+}
+async function postComment(id,text){
+  text=(text||'').trim();
+  if(!text)return;
+  if(!me){formMsgTop('Please login from My Profile to comment.','err');return}
+  var r=await db.from('prompt_comments').insert({prompt_id:id,user_id:me.id,body:text}).select('id,prompt_id,user_id,body,created_at,profiles(username,full_name,avatar_url)').single();
+  if(r.error)return;
+  var p=all.find(x=>x.id===id);if(p)p.comments_count=(p.comments_count||0)+1;
+  if(!commentsCache[id])commentsCache[id]=[];
+  commentsCache[id].push(r.data);
+  render();
+}
+async function deleteComment(commentId,promptId){
+  if(!confirm('Delete this comment?'))return;
+  var r=await db.from('prompt_comments').delete().eq('id',commentId);
+  if(r.error)return;
+  var p=all.find(x=>x.id===promptId);if(p)p.comments_count=Math.max((p.comments_count||1)-1,0);
+  if(commentsCache[promptId])commentsCache[promptId]=commentsCache[promptId].filter(c=>c.id!==commentId);
+  render();
+}
+async function sharePrompt(id){
+  var p=all.find(x=>x.id===id);if(!p)return;
+  var url=location.origin+location.pathname+'?view='+id;
+  if(navigator.share){
+    try{await navigator.share({title:p.title,text:p.title,url:url});return}catch(e){return}
+  }
+  await PH.copyText(url);
+  formMsgTop('Link copied to clipboard ✓','ok');
+  setTimeout(function(){$('status').hidden=true},1500);
+}
 
 function startEdit(id){
   var p=all.find(x=>x.id===id);if(!p)return;
@@ -320,7 +437,7 @@ async function init(){
   var s=await db.auth.getSession();
   me=s.data&&s.data.session?s.data.session.user:null;
   updateWhoami();
-  db.auth.onAuthStateChange(function(_e,session){me=session?session.user:null;updateWhoami();render()});
+  db.auth.onAuthStateChange(function(_e,session){me=session?session.user:null;updateWhoami();loadMyLikes().then(render)});
   await loadList();
   var editId=new URLSearchParams(location.search).get('edit');
   if(editId){
