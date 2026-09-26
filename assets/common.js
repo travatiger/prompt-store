@@ -48,12 +48,33 @@
     }
   }
 
+  function initTheme() {
+    var saved = localStorage.getItem('ph-theme');
+    var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+
+  function bindThemeToggle(btnId) {
+    var btn = document.getElementById(btnId || 'themeBtn');
+    if (!btn) return;
+    btn.onclick = function () {
+      var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      var next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('ph-theme', next);
+    };
+  }
+
+  initTheme();
+
   var api = {
     SUPABASE_URL: SUPABASE_URL,
     CONFIG: CONFIG,
     CATEGORIES: CATEGORIES,
     esc: esc,
     copyText: copyText,
+    initTheme: initTheme,
+    bindThemeToggle: bindThemeToggle,
     db: null,
     initError: null
   };
