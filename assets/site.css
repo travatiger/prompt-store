@@ -147,5 +147,32 @@ input:focus,textarea:focus{outline:none}
 .p-actions .btn{padding:7px 12px;font-size:12.5px}
 .empty-note{padding:30px;text-align:center;color:var(--muted)}
 
+.p-stats{display:flex;align-items:center;gap:4px;border-top:1px solid var(--border);padding-top:10px;margin-top:2px}
+.icon-btn{border:0;background:transparent;color:var(--muted);display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer;padding:6px 8px;border-radius:8px;font-family:inherit}
+.icon-btn:hover{background:var(--soft);color:var(--text)}
+.icon-btn.liked{color:#e0245e}
+.icon-btn svg{width:16px;height:16px}
+.views-note{margin-left:auto;color:var(--muted);font-size:12px}
+
+.comments-panel{border-top:1px solid var(--border);padding-top:10px;margin-top:2px;display:flex;flex-direction:column;gap:8px}
+.comment-item{display:flex;gap:8px;font-size:12.5px}
+.comment-item img{width:22px;height:22px;border-radius:50%;object-fit:cover;background:var(--soft);flex:none}
+.comment-item b{font-weight:700}
+.comment-item .c-del{margin-left:auto;color:var(--muted);background:none;border:0;cursor:pointer;font-size:11px}
+.comment-form{display:flex;gap:8px}
+.comment-form input{flex:1;padding:8px 10px;border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:999px;font:inherit;font-size:12.5px}
+.comment-loading{color:var(--muted);font-size:12px}
+
 @media(max-width:650px){.prompt-grid{grid-template-columns:1fr}}
+
+/* ---------- public profile page ---------- */
+.p-author-link{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px}
+.p-author-link:hover{color:var(--text)}
+.profile-stats{display:flex;gap:26px;margin:16px 0 4px}
+.profile-stats .stat{text-align:left}
+.profile-stats b{font-size:17px;display:block}
+.profile-stats span{font-size:12px;color:var(--muted)}
+.info-list{display:flex;flex-direction:column;gap:9px;font-size:13.5px}
+.info-list .k{color:var(--muted);display:inline-block;min-width:88px}
+.follow-btn.following{background:var(--soft);color:var(--text)}
 
