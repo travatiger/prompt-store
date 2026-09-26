@@ -1,82 +1,280 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>My Profile — PromptHub</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="assets/theme.css">
 <style>
-:root{--bg:#f4f5f6;--card:#fff;--soft:#f8f9fa;--line:#e5e7eb;--text:#17191c;--muted:#737981;--shadow:0 5px 22px rgba(20,25,30,.055)}
-*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;background:var(--bg)!important;color:var(--text)!important;font-family:Arial,Helvetica,sans-serif!important}a{color:inherit;text-decoration:none}
-.nav{background:#fff!important;border-bottom:1px solid var(--line)!important;height:62px;padding:0 18px}.nav-inner{max-width:900px;margin:auto;height:100%;display:flex;align-items:center;justify-content:space-between}.logo{font-size:20px;font-weight:700;color:var(--text)!important}.back{font-size:14px;color:var(--muted)!important}
-.container{max-width:900px;margin:24px auto;padding:0 14px}.card{background:#fff!important;border:1px solid var(--line)!important;border-radius:18px!important;box-shadow:var(--shadow)!important;color:var(--text)!important}.status{padding:22px}.narrow{max-width:450px;margin:28px auto;padding:24px}
-.profile-card{overflow:hidden}.cover{height:245px;background:#eceeef center/cover no-repeat}.profile-body{padding:0 26px 25px}.profile-top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-top:-48px}.avatar{width:104px;height:104px;border-radius:50%;object-fit:cover;background:#eee;border:5px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.08);display:block}.name{font-size:28px!important;margin:12px 0 2px!important;color:var(--text)!important;font-weight:700!important}.username{margin:0;color:var(--muted)}.actions{display:flex;gap:8px;margin-bottom:2px}.btn{appearance:none;border:1px solid #dfe1e4!important;background:#fff!important;color:#24272b!important;border-radius:10px!important;padding:10px 15px!important;font-weight:700!important;cursor:pointer;box-shadow:none!important}.btn:hover{background:#f4f5f6!important}.btn.primary{background:#202327!important;color:#fff!important;border-color:#202327!important}.btn.primary:hover{background:#33373b!important}
-.about{padding:24px;margin-top:16px}.about h2{font-size:22px!important;margin:0 0 6px;color:var(--text)!important}.bio{margin:0 0 18px;color:var(--muted);line-height:1.55}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field{background:var(--soft)!important;border:1px solid #eeeeef!important;border-radius:13px;padding:14px;text-align:left;cursor:pointer;color:var(--text)!important}.field:hover{background:#f3f4f5!important}.field b{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8a9097;margin-bottom:5px}.field span{display:block;word-break:break-word;color:#282c31;font-size:14px}
-.inline-edit{margin-top:20px;padding-top:20px;border-top:1px solid var(--line)}.inline-edit[hidden]{display:none!important}.edit-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.edit-head h2{margin:0;font-size:22px}.close{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#fff;color:#555;cursor:pointer;font-size:20px}.muted{color:var(--muted)!important}.inline-edit label{display:block;color:#666d75!important;font-size:12px!important;margin:0 0 5px}.inline-edit input,.inline-edit textarea{width:100%;padding:12px 13px;border:1px solid #dedfe2!important;border-radius:10px!important;background:#fff!important;color:var(--text)!important;margin:0 0 13px;font:inherit}.inline-edit textarea{min-height:100px;resize:vertical}.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.upload-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.media{border:1px solid var(--line);background:#fafafa;border-radius:13px;padding:9px}.media img{width:100%;height:120px;object-fit:cover;border-radius:9px;background:#eee;display:block;margin-bottom:8px}.file-label{display:block;text-align:center;padding:9px;border:1px solid var(--line);background:#fff;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer}.msg{min-height:20px;margin-top:10px;font-size:13px}.ok{color:#4b5563!important}.err{color:#b42318!important}
-.auth-card{padding:26px}.auth-card h1{margin-top:0}.auth-card input{width:100%;padding:12px;border:1px solid var(--line)!important;border-radius:10px;margin:6px 0 14px;background:#fff!important;color:var(--text)!important}.auth-card .btn{width:100%;margin-top:4px}.seg{display:flex;gap:6px;margin:16px 0}.seg button{flex:1;border:1px solid var(--line)!important;background:#fff!important;color:#777!important;border-radius:9px!important;padding:10px;font-weight:700}.seg button.on{background:#f0f0f0!important;color:#222!important}.ok,.msg.ok{color:#555!important}
-/* Hard neutralize the old blue/indigo theme on this profile page. */
-button,.btn,input,textarea,select,.field,.seg button,.file-label{--blue:none}.btn.primary{background:#202327!important;color:#fff!important;border-color:#202327!important}.btn.primary:hover{background:#33373b!important}.field{background:#f8f9fa!important;color:#222!important}.inline-edit input:focus,.inline-edit textarea:focus{outline:2px solid #cfd2d6!important;outline-offset:1px;border-color:#cfd2d6!important}.auth-card .btn.primary{background:#202327!important;color:#fff!important}
-@media(max-width:650px){.container{margin-top:14px}.cover{height:190px}.profile-body{padding:0 16px 20px}.profile-top{align-items:flex-start;flex-direction:column;margin-top:-46px}.actions{width:100%;margin-top:0}.actions .btn{flex:1}.name{font-size:25px!important}.grid,.edit-grid,.upload-row{grid-template-columns:1fr}.about{padding:18px}}
-</style>>
+:root{
+  --bg:#f7f7f8;--card:#ffffff;--soft:#f3f4f6;--border:#e6e7eb;
+  --text:#16181c;--muted:#70757d;--accent:#16181c;--accent-text:#ffffff;
+  --danger:#c0392b;--shadow:0 8px 28px rgba(20,20,25,.06);
+}
+:root[data-theme="dark"]{
+  --bg:#101114;--card:#17181c;--soft:#1e2024;--border:#2a2c31;
+  --text:#f1f1f3;--muted:#93979f;--accent:#f1f1f3;--accent-text:#101114;
+  --danger:#ff6b5e;--shadow:0 8px 28px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;transition:background .2s ease,color .2s ease}
+a{color:inherit;text-decoration:none}
+
+.nav{background:var(--card);border-bottom:1px solid var(--border);height:60px}
+.nav-inner{max-width:640px;margin:auto;height:100%;padding:0 16px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:18px;font-weight:700}
+.nav-right{display:flex;align-items:center;gap:10px}
+.back{font-size:14px;color:var(--muted)}
+.theme-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--soft);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.theme-btn svg{width:17px;height:17px}
+.theme-btn .moon{display:none}
+[data-theme="dark"] .theme-btn .sun{display:none}
+[data-theme="dark"] .theme-btn .moon{display:block}
+
+.container{max-width:640px;margin:28px auto;padding:0 16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+.status{padding:22px;text-align:center;color:var(--muted)}
+.narrow{max-width:400px;margin:36px auto;padding:26px}
+
+.auth-card h1{margin:0 0 4px;font-size:22px}
+.auth-card input{width:100%;padding:12px 13px;border:1px solid var(--border);border-radius:10px;margin:6px 0 14px;background:var(--soft);color:var(--text);font:inherit}
+.auth-card label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.seg{display:flex;gap:6px;margin:16px 0}
+.seg button{flex:1;border:1px solid var(--border);background:var(--soft);color:var(--muted);border-radius:9px;padding:10px;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+
+.btn{appearance:none;border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:10px;padding:10px 16px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit}
+.btn:hover{filter:brightness(0.97)}
+.btn.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.block{width:100%}
+.btn.link{border:0;background:transparent;color:var(--muted);padding:8px 0}
+
+.profile-card{overflow:hidden}
+.cover-wrap{position:relative;height:150px;background:var(--soft) center/cover no-repeat}
+.cover-edit{position:absolute;right:10px;bottom:10px;font-size:12px;padding:6px 11px;border-radius:20px;background:rgba(0,0,0,.55);color:#fff;border:0;cursor:pointer;font-weight:600}
+.profile-main{padding:0 22px;margin-top:-40px}
+.avatar-wrap{position:relative;width:82px;height:82px}
+.avatar{width:82px;height:82px;border-radius:50%;object-fit:cover;background:var(--soft);border:4px solid var(--card);display:block}
+.avatar-edit{position:absolute;bottom:-2px;right:-2px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-text);border:2px solid var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px}
+.name-row{margin-top:12px}
+.name-input{width:100%;border:1px solid transparent;background:transparent;font-size:22px;font-weight:700;color:var(--text);padding:4px 6px;margin-left:-6px;border-radius:8px;font-family:inherit}
+.name-input:hover,.name-input:focus{border-color:var(--border);background:var(--soft)}
+.username-row{display:flex;align-items:center;color:var(--muted);margin-top:2px}
+.username-row span{padding-left:6px}
+.username-input{border:1px solid transparent;background:transparent;color:var(--muted);font-size:14px;padding:4px 4px;border-radius:8px;font-family:inherit}
+.username-input:hover,.username-input:focus{border-color:var(--border);background:var(--soft);color:var(--text)}
+input:focus,textarea:focus{outline:none}
+
+.section{padding:18px 22px}
+.bio{width:100%;min-height:70px;resize:vertical;border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:12px;padding:12px 13px;font:inherit}
+.bio::placeholder,input::placeholder{color:var(--muted)}
+
+.field-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid input{width:100%;padding:11px 12px;border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:10px;font:inherit}
+
+.footer-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:16px 22px}
+.msg{font-size:13px;color:var(--muted)}
+.msg.ok{color:#3a9d5d}
+.msg.err{color:var(--danger)}
+
+@media(max-width:480px){.grid{grid-template-columns:1fr}.section,.footer-row{padding-left:16px;padding-right:16px}.profile-main{padding-left:16px;padding-right:16px}.footer-row{flex-direction:column;align-items:stretch}}
+</style>
 </head>
 <body>
-<nav class="nav"><div class="nav-inner"><a class="logo" href="index.html">Prompt<span>Hub</span></a><a class="back" href="index.html">Home</a></div></nav>
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">Prompt<span>Hub</span></a>
+    <div class="nav-right">
+      <a class="back" href="index.html">Home</a>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      </button>
+      <button class="btn" id="logout" type="button" hidden>Logout</button>
+    </div>
+  </div>
+</nav>
+
 <main class="container">
-<div class="card status" id="status">Loading…</div>
-<section class="card narrow auth-card" id="authView" hidden>
-<h1>My Profile</h1><p class="muted">Login to manage your personal profile.</p>
-<div class="seg"><button id="tabLogin" class="on" type="button">Login</button><button id="tabSignup" type="button">Sign up</button></div>
-<button class="btn" id="googleBtn" type="button">Continue with Google</button>
-<div id="loginBox"><form id="loginForm"><label>Email</label><input id="lEmail" type="email" required autocomplete="email"><label>Password</label><input id="lPass" type="password" required autocomplete="current-password"><button class="btn primary">Login</button></form><button class="btn" id="forgot" style="margin-top:10px;border:0!important;background:transparent!important;color:var(--muted)!important" type="button">Forgot password?</button></div>
-<div id="signupBox" hidden><form id="signupForm"><label>Full name</label><input id="sName" maxlength="120" required autocomplete="name"><label>Email</label><input id="sEmail" type="email" required autocomplete="email"><label>Password (min. 8 characters)</label><input id="sPass" type="password" minlength="8" required autocomplete="new-password"><button class="btn primary">Create account</button></form></div>
-<div id="authMsg" class="msg"></div></section>
-<section id="profileView" hidden>
-<div class="card profile-card">
-<div id="cover" class="cover"></div>
-<div class="profile-body">
-<div id="profileSummary" class="profile-top"><div><img id="avatar" class="avatar" alt="Profile picture"><h1 id="displayName" class="name">Your Name</h1><p id="displayUsername" class="username">@username</p></div><div class="actions"><button class="btn primary" id="editBtn" type="button">Edit profile</button><button class="btn" id="logout" type="button">Logout</button></div></div>
-<div class="inline-edit" id="inlineEdit" hidden>
-<div class="edit-head"><div><h2>Edit profile</h2><p class="muted" style="margin:5px 0 0">Update your information and photos.</p></div><button class="close" id="closeEdit" type="button">×</button></div>
-<div class="upload-row"><div class="media"><img id="avatarPreview" alt="Profile preview"><label class="file-label" for="avatarFile">Change profile picture</label><input id="avatarFile" type="file" accept="image/*" hidden></div><div class="media"><img id="coverPreview" alt="Cover preview"><label class="file-label" for="coverFile">Change cover picture</label><input id="coverFile" type="file" accept="image/*" hidden></div></div>
-<label>Full name</label><input id="profileName" maxlength="120"><label>Username</label><input id="profileUsername" maxlength="32" placeholder="yourusername"><label>About / Bio</label><textarea id="profileBio" maxlength="1000"></textarea>
-<div class="edit-grid"><div><label>Country</label><input id="profileCountry" maxlength="80"></div><div><label>City</label><input id="profileCity" maxlength="80"></div><div><label>Phone number</label><input id="profilePhone" maxlength="40"></div><div><label>Website</label><input id="profileWebsite" maxlength="300" placeholder="https://..."></div><div><label>Occupation</label><input id="profileOccupation" maxlength="120"></div><div><label>Education</label><input id="profileEducation" maxlength="160"></div></div>
-<button class="btn primary" id="saveProfile" type="button">Save profile</button><div id="profileMsg" class="msg"></div>
-</div></div>
-</div>
-<div class="card about"><h2>About</h2><p id="displayBio" class="bio">Tell people about yourself.</p><div class="grid">
-<button class="field" data-edit="profileCountry" type="button"><b>Country</b><span id="displayCountry">—</span></button>
-<button class="field" data-edit="profileCity" type="button"><b>City</b><span id="displayCity">—</span></button>
-<button class="field" data-edit="profilePhone" type="button"><b>Phone</b><span id="displayPhone">—</span></button>
-<button class="field" data-edit="profileWebsite" type="button"><b>Website</b><span id="displayWebsite">—</span></button>
-<button class="field" data-edit="profileOccupation" type="button"><b>Occupation</b><span id="displayOccupation">—</span></button>
-<button class="field" data-edit="profileEducation" type="button"><b>Education</b><span id="displayEducation">—</span></button>
-</div></div>
-</section></main>
+  <div class="card status" id="status">Loading…</div>
 
+  <section class="card narrow auth-card" id="authView" hidden>
+    <h1>My Profile</h1>
+    <p class="msg" style="margin-top:0">Login to manage your personal profile.</p>
+    <div class="seg"><button id="tabLogin" class="on" type="button">Login</button><button id="tabSignup" type="button">Sign up</button></div>
+    <button class="btn block" id="googleBtn" type="button">Continue with Google</button>
+    <div id="loginBox" style="margin-top:14px">
+      <form id="loginForm">
+        <label>Email</label><input id="lEmail" type="email" required autocomplete="email">
+        <label>Password</label><input id="lPass" type="password" required autocomplete="current-password">
+        <button class="btn primary block">Login</button>
+      </form>
+      <button class="btn link" id="forgot" type="button">Forgot password?</button>
+    </div>
+    <div id="signupBox" hidden style="margin-top:14px">
+      <form id="signupForm">
+        <label>Full name</label><input id="sName" maxlength="120" required autocomplete="name">
+        <label>Email</label><input id="sEmail" type="email" required autocomplete="email">
+        <label>Password (min. 8 characters)</label><input id="sPass" type="password" minlength="8" required autocomplete="new-password">
+        <button class="btn primary block">Create account</button>
+      </form>
+    </div>
+    <div id="authMsg" class="msg"></div>
+  </section>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="assets/common.js"></script>
+  <section id="profileView" hidden>
+    <div class="card profile-card">
+      <div class="cover-wrap" id="cover">
+        <button class="cover-edit" id="coverBtn" type="button">Change cover</button>
+        <input id="coverFile" type="file" accept="image/*" hidden>
+      </div>
+      <div class="profile-main">
+        <div class="avatar-wrap">
+          <img id="avatar" class="avatar" alt="Profile picture">
+          <button class="avatar-edit" id="avatarBtn" type="button" aria-label="Change profile picture">✎</button>
+          <input id="avatarFile" type="file" accept="image/*" hidden>
+        </div>
+        <div class="name-row">
+          <input id="profileName" class="name-input" maxlength="120" placeholder="Your name">
+          <div class="username-row"><span>@</span><input id="profileUsername" class="username-input" maxlength="32" placeholder="username"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <label class="field-label">About</label>
+        <textarea id="profileBio" class="bio" maxlength="1000" placeholder="Tell people about yourself…"></textarea>
+      </div>
+
+      <div class="section">
+        <div class="grid">
+          <div><label class="field-label">Country</label><input id="profileCountry" maxlength="80"></div>
+          <div><label class="field-label">City</label><input id="profileCity" maxlength="80"></div>
+          <div><label class="field-label">Phone number</label><input id="profilePhone" maxlength="40"></div>
+          <div><label class="field-label">Website</label><input id="profileWebsite" maxlength="300" placeholder="https://…"></div>
+          <div><label class="field-label">Occupation</label><input id="profileOccupation" maxlength="120"></div>
+          <div><label class="field-label">Education</label><input id="profileEducation" maxlength="160"></div>
+        </div>
+      </div>
+
+      <div class="footer-row">
+        <button class="btn primary" id="saveProfile" type="button">Save changes</button>
+        <span id="profileMsg" class="msg"></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/common.js"></script>
 <script>
-(function(){'use strict';var PH=window.PH,db=PH.db,$=id=>document.getElementById(id),me=null;
-var DEF_AV='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23eeeeee"/><circle cx="50" cy="38" r="18" fill="%23999999"/><path d="M15 92c6-22 24-34 35-34s29 12 35 34" fill="%23999999"/></svg>';
-var DEF_CV='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 180"><rect width="600" height="180" fill="%23e9eaec"/></svg>';
+(function(){'use strict';
+var PH=window.PH,db=PH.db,$=id=>document.getElementById(id),me=null;
+var DEF_AV='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23e5e5e5"/><circle cx="50" cy="38" r="18" fill="%23a0a0a0"/><path d="M15 92c6-22 24-34 35-34s29 12 35 34" fill="%23a0a0a0"/></svg>';
+var DEF_CV='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 180"><rect width="600" height="180" fill="%23e5e5e5"/></svg>';
+
+/* ---------- theme ---------- */
+(function initTheme(){
+  var saved=localStorage.getItem('ph-theme');
+  var theme=saved||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  document.documentElement.setAttribute('data-theme',theme);
+})();
+$('themeBtn').onclick=function(){
+  var cur=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
+  var next=cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('ph-theme',next);
+};
+
 function msg(text,kind){$('profileMsg').textContent=text||'';$('profileMsg').className='msg '+(kind||'')}
 function authMsg(text,kind){$('authMsg').textContent=text||'';$('authMsg').className='msg '+(kind||'')}
-function showAuth(){$('status').hidden=true;$('authView').hidden=false;$('profileView').hidden=true;$('inlineEdit').hidden=true;$('profileSummary').hidden=false}
-function showProfile(){$('status').hidden=true;$('authView').hidden=true;$('profileView').hidden=false}
-function fill(p){p=p||{};$('profileName').value=p.full_name||'';$('profileUsername').value=p.username||'';$('profileBio').value=p.bio||'';$('profileCountry').value=p.country||'';$('profileCity').value=p.city||'';$('profilePhone').value=p.phone_number||'';$('profileWebsite').value=p.website_url||'';$('profileOccupation').value=p.occupation||'';$('profileEducation').value=p.education||'';$('avatar').src=p.avatar_url||DEF_AV;$('avatarPreview').src=p.avatar_url||DEF_AV;$('cover').style.backgroundImage='url("'+(p.cover_url||DEF_CV)+'")';$('coverPreview').src=p.cover_url||DEF_CV;$('displayName').textContent=p.full_name||'Your Name';$('displayUsername').textContent='@'+(p.username||'username');$('displayBio').textContent=p.bio||'Tell people about yourself.';$('displayCountry').textContent=p.country||'—';$('displayCity').textContent=p.city||'—';$('displayPhone').textContent=p.phone_number||'—';$('displayWebsite').textContent=p.website_url||'—';$('displayOccupation').textContent=p.occupation||'—';$('displayEducation').textContent=p.education||'—'}
-async function load(){var s=await db.auth.getSession();if(s.error){$('status').textContent=s.error.message;return}if(s.data.session)enter(s.data.session.user);else showAuth();db.auth.onAuthStateChange(function(_e,session){if(session)enter(session.user);else showAuth()})}
-async function enter(user){me=user;showProfile();var r=await db.from('profiles').select('full_name,username,avatar_url,cover_url,bio,website_url,country,city,phone_number,occupation,education').eq('id',user.id).maybeSingle();if(r.error){$('status').textContent='Profile data could not be loaded: '+r.error.message;return}if(!r.data){var ins=await db.from('profiles').insert({id:user.id,full_name:user.user_metadata?.full_name||user.user_metadata?.name||'',username:'user_'+user.id.slice(0,8)}).select().single();if(ins.error){$('status').textContent=ins.error.message;return}r={data:ins.data}}fill(r.data)}
-$('tabLogin').onclick=function(){$('tabLogin').classList.add('on');$('tabSignup').classList.remove('on');$('loginBox').hidden=false;$('signupBox').hidden=true;authMsg('')};$('tabSignup').onclick=function(){$('tabSignup').classList.add('on');$('tabLogin').classList.remove('on');$('loginBox').hidden=true;$('signupBox').hidden=false;authMsg('')};
+function showAuth(){$('status').hidden=true;$('authView').hidden=false;$('profileView').hidden=true;$('logout').hidden=true}
+function showProfile(){$('status').hidden=true;$('authView').hidden=true;$('profileView').hidden=false;$('logout').hidden=false}
+
+function fill(p){
+  p=p||{};
+  $('profileName').value=p.full_name||'';
+  $('profileUsername').value=p.username||'';
+  $('profileBio').value=p.bio||'';
+  $('profileCountry').value=p.country||'';
+  $('profileCity').value=p.city||'';
+  $('profilePhone').value=p.phone_number||'';
+  $('profileWebsite').value=p.website_url||'';
+  $('profileOccupation').value=p.occupation||'';
+  $('profileEducation').value=p.education||'';
+  $('avatar').src=p.avatar_url||DEF_AV;
+  $('cover').style.backgroundImage='url("'+(p.cover_url||DEF_CV)+'")';
+}
+
+async function load(){
+  var s=await db.auth.getSession();
+  if(s.error){$('status').textContent=s.error.message;return}
+  if(s.data.session)enter(s.data.session.user);else showAuth();
+  db.auth.onAuthStateChange(function(_e,session){if(session)enter(session.user);else showAuth()});
+}
+async function enter(user){
+  me=user;showProfile();
+  var r=await db.from('profiles').select('full_name,username,avatar_url,cover_url,bio,website_url,country,city,phone_number,occupation,education').eq('id',user.id).maybeSingle();
+  if(r.error){$('status').hidden=false;$('profileView').hidden=true;$('status').textContent='Profile data could not be loaded: '+r.error.message;return}
+  if(!r.data){
+    var ins=await db.from('profiles').insert({id:user.id,full_name:user.user_metadata?.full_name||user.user_metadata?.name||'',username:'user_'+user.id.slice(0,8)}).select().single();
+    if(ins.error){$('status').hidden=false;$('profileView').hidden=true;$('status').textContent=ins.error.message;return}
+    r={data:ins.data};
+  }
+  fill(r.data);
+}
+
+$('tabLogin').onclick=function(){$('tabLogin').classList.add('on');$('tabSignup').classList.remove('on');$('loginBox').hidden=false;$('signupBox').hidden=true;authMsg('')};
+$('tabSignup').onclick=function(){$('tabSignup').classList.add('on');$('tabLogin').classList.remove('on');$('loginBox').hidden=true;$('signupBox').hidden=false;authMsg('')};
 $('googleBtn').onclick=async function(){var r=await db.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});if(r.error)authMsg(r.error.message,'err')};
 $('loginForm').onsubmit=async function(e){e.preventDefault();var r=await db.auth.signInWithPassword({email:$('lEmail').value,password:$('lPass').value});if(r.error)authMsg(r.error.message,'err');else authMsg('Logged in ✓','ok')};
 $('signupForm').onsubmit=async function(e){e.preventDefault();var r=await db.auth.signUp({email:$('sEmail').value,password:$('sPass').value,options:{data:{full_name:$('sName').value.trim()}}});if(r.error)authMsg(r.error.message,'err');else authMsg('Account created. Check your email if verification is enabled.','ok')};
 $('forgot').onclick=async function(){var email=$('lEmail').value.trim();if(!email){authMsg('Enter your email first.','err');return}var r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});authMsg(r.error?r.error.message:'Password reset email sent.',r.error?'err':'ok')};
-function openEdit(target){$('profileSummary').hidden=true;$('inlineEdit').hidden=false;var input=target&&$(target);if(input)setTimeout(()=>input.focus(),80);else setTimeout(()=>$('profileName').focus(),80)}function closeEdit(){$('inlineEdit').hidden=true;$('profileSummary').hidden=false}
-$('editBtn').onclick=()=>openEdit();$('closeEdit').onclick=closeEdit;document.querySelectorAll('[data-edit]').forEach(el=>el.onclick=()=>openEdit(el.getAttribute('data-edit')));
-async function save(){var upd={full_name:$('profileName').value.trim(),username:$('profileUsername').value.trim()||null,bio:$('profileBio').value.trim(),country:$('profileCountry').value.trim(),city:$('profileCity').value.trim(),phone_number:$('profilePhone').value.trim(),website_url:$('profileWebsite').value.trim(),occupation:$('profileOccupation').value.trim(),education:$('profileEducation').value.trim()};var r=await db.from('profiles').update(upd).eq('id',me.id);if(r.error){msg(r.error.message,'err');return}fill(Object.assign({},upd,{avatar_url:$('avatar').src,cover_url:$('coverPreview').src}));msg('Profile saved ✓','ok');setTimeout(closeEdit,400)}$('saveProfile').onclick=save;$('logout').onclick=async()=>{await db.auth.signOut();showAuth()};
-async function upload(file,kind){if(!file)return;if(file.size>5*1024*1024){msg('Image must be under 5MB','err');return}var ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';var path='avatars/'+me.id+'/'+kind+'-'+Date.now()+'.'+ext;msg('Uploading...','');var up=await db.storage.from('product-media').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});if(up.error){msg('Upload failed: '+up.error.message,'err');return}var url=db.storage.from('product-media').getPublicUrl(path).data.publicUrl;var field=kind==='avatar'?'avatar_url':'cover_url',obj={};obj[field]=url;var r=await db.from('profiles').update(obj).eq('id',me.id);if(r.error){msg(r.error.message,'err');return}if(kind==='avatar'){$('avatar').src=url;$('avatarPreview').src=url}else{$('cover').style.backgroundImage='url("'+url+'")';$('coverPreview').src=url}msg((kind==='avatar'?'Profile picture':'Cover picture')+' updated ✓','ok')}
-$('avatarFile').onchange=e=>{upload(e.target.files[0],'avatar');e.target.value=''};$('coverFile').onchange=e=>{upload(e.target.files[0],'cover');e.target.value=''};
+
+async function save(){
+  var upd={
+    full_name:$('profileName').value.trim(),
+    username:$('profileUsername').value.trim()||null,
+    bio:$('profileBio').value.trim(),
+    country:$('profileCountry').value.trim(),
+    city:$('profileCity').value.trim(),
+    phone_number:$('profilePhone').value.trim(),
+    website_url:$('profileWebsite').value.trim(),
+    occupation:$('profileOccupation').value.trim(),
+    education:$('profileEducation').value.trim()
+  };
+  msg('Saving…','');
+  var r=await db.from('profiles').update(upd).eq('id',me.id);
+  if(r.error){msg(r.error.message,'err');return}
+  msg('Saved ✓','ok');
+}
+$('saveProfile').onclick=save;
+$('logout').onclick=async function(){await db.auth.signOut();showAuth()};
+
+async function upload(file,kind){
+  if(!file)return;
+  if(file.size>5*1024*1024){msg('Image must be under 5MB','err');return}
+  var ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+  var path='avatars/'+me.id+'/'+kind+'-'+Date.now()+'.'+ext;
+  msg('Uploading…','');
+  var up=await db.storage.from('product-media').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});
+  if(up.error){msg('Upload failed: '+up.error.message,'err');return}
+  var url=db.storage.from('product-media').getPublicUrl(path).data.publicUrl;
+  var field=kind==='avatar'?'avatar_url':'cover_url',obj={};obj[field]=url;
+  var r=await db.from('profiles').update(obj).eq('id',me.id);
+  if(r.error){msg(r.error.message,'err');return}
+  if(kind==='avatar'){$('avatar').src=url}else{$('cover').style.backgroundImage='url("'+url+'")'}
+  msg((kind==='avatar'?'Profile picture':'Cover picture')+' updated ✓','ok');
+}
+$('avatarBtn').onclick=function(){$('avatarFile').click()};
+$('coverBtn').onclick=function(){$('coverFile').click()};
+$('avatarFile').onchange=e=>{upload(e.target.files[0],'avatar');e.target.value=''};
+$('coverFile').onchange=e=>{upload(e.target.files[0],'cover');e.target.value=''};
+
 load();
 })();
 </script>
-</body></html>
+</body>
+</html>
