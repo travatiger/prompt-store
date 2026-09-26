@@ -251,7 +251,7 @@ function cardHtml(p){
   var commentsHtml=openComments.has(p.id)?commentsPanelHtml(p.id):'';
   return '<article class="card prompt-card">'+
     '<div class="p-top"><span class="badge">'+CAT_LABEL[p.category]+'</span>'+
-    '<div class="p-author"><img src="'+esc(avatar)+'" alt="">'+esc(author.username?('@'+author.username):(author.full_name||'User'))+'</div></div>'+
+    '<a class="p-author-link" href="profile.html?u='+esc(p.user_id)+'"><img src="'+esc(avatar)+'" alt="">'+esc(author.username?('@'+author.username):(author.full_name||'User'))+'</a></div>'+
     '<h3 class="p-title">'+esc(p.title)+'</h3>'+
     '<p class="p-body">'+esc(p.body)+'</p>'+
     media+
@@ -272,7 +272,7 @@ function commentItemHtml(c){
   var author=c.profiles||{};
   var avatar=author.avatar_url||'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
   var mine=me&&c.user_id===me.id;
-  return '<div class="comment-item"><img src="'+esc(avatar)+'" alt=""><div><b>'+esc(author.username?('@'+author.username):(author.full_name||'User'))+'</b> '+esc(c.body)+'</div>'+
+  return '<div class="comment-item"><a href="profile.html?u='+esc(c.user_id)+'"><img src="'+esc(avatar)+'" alt=""></a><div><a href="profile.html?u='+esc(c.user_id)+'" style="color:inherit"><b>'+esc(author.username?('@'+author.username):(author.full_name||'User'))+'</b></a> '+esc(c.body)+'</div>'+
     (mine?'<button class="c-del" data-del-comment="'+c.id+'" data-comment-prompt="'+c.prompt_id+'" type="button">Delete</button>':'')+
     '</div>';
 }

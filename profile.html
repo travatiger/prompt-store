@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Profile — PromptHub</title>
+<link rel="manifest" href="manifest.webmanifest">
+<script>(function(){try{var t=localStorage.getItem('ph-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">Prompt<span>Hub</span></a>
+    <div class="nav-right">
+      <a class="back" href="prompts.html">Prompts</a>
+      <a class="back" href="account.html">My Profile</a>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="container">
+  <div class="card status" id="status">Loading…</div>
+
+  <section id="profileView" hidden>
+    <div class="card profile-card">
+      <div class="cover-wrap" id="cover"></div>
+      <div class="profile-main">
+        <div class="avatar-wrap">
+          <img id="avatar" class="avatar" alt="Profile picture">
+        </div>
+        <div class="name-row">
+          <h1 id="pName" style="font-size:22px;margin:12px 0 0"></h1>
+          <div class="username-row"><span id="pUsername" style="padding-left:0"></span></div>
+        </div>
+      </div>
+
+      <div class="section" style="padding-top:8px">
+        <div class="profile-stats">
+          <div class="stat"><b id="statPrompts">0</b><span>Prompts</span></div>
+          <div class="stat"><b id="statFollowers">0</b><span>Followers</span></div>
+          <div class="stat"><b id="statFollowing">0</b><span>Following</span></div>
+        </div>
+        <p id="pBio" style="color:var(--muted);font-size:14px;line-height:1.6;margin:10px 0 14px"></p>
+        <div class="info-list" id="infoList"></div>
+        <div style="margin-top:16px">
+          <button class="btn primary follow-btn" id="followBtn" type="button" hidden>Follow</button>
+          <a class="btn primary" id="editProfileBtn" href="account.html" hidden>Edit profile</a>
+        </div>
+      </div>
+    </div>
+
+    <h2 style="font-size:16px;margin:22px 0 12px" id="promptsHeading">Prompts</h2>
+    <div class="prompt-grid" id="grid"></div>
+    <div class="card status" id="emptyNote" hidden>No prompts uploaded yet.</div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/common.js"></script>
+<script>
+(function(){'use strict';
+var PH=window.PH,db=PH.db,$=id=>document.getElementById(id),esc=PH.esc,me=null,target=null,isFollowing=false;
+var CAT_LABEL={general:'General',image:'Image',video:'Video',audio:'Audio',website:'Website'};
+var DEF_AV='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23e5e5e5"/><circle cx="50" cy="38" r="18" fill="%23a0a0a0"/><path d="M15 92c6-22 24-34 35-34s29 12 35 34" fill="%23a0a0a0"/></svg>';
+var DEF_CV='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 180"><rect width="600" height="180" fill="%23e5e5e5"/></svg>';
+
+PH.bindThemeToggle('themeBtn');
+
+function showError(t){$('status').hidden=false;$('status').textContent=t;$('profileView').hidden=true}
+
+async function init(){
+  var s=await db.auth.getSession();
+  me=s.data&&s.data.session?s.data.session.user:null;
+
+  var uid=new URLSearchParams(location.search).get('u');
+  if(!uid){
+    if(me){location.href='profile.html?u='+me.id;return}
+    showError('No profile specified.');return;
+  }
+  target=uid;
+
+  var r=await db.from('profiles').select('id,full_name,username,avatar_url,cover_url,bio,country,city,website_url,occupation,education,followers_count,following_count').eq('id',uid).maybeSingle();
+  if(r.error||!r.data){showError('This profile could not be found.');return}
+  renderProfile(r.data);
+
+  var pr=await db.from('prompts').select('id,user_id,title,category,body,media_url,website_url,website_image_url,views_count,likes_count,comments_count,created_at').eq('user_id',uid).order('created_at',{ascending:false});
+  var list=pr.error?[]:(pr.data||[]);
+  $('statPrompts').textContent=list.length;
+  renderGrid(list);
+
+  if(me&&me.id!==uid){
+    var f=await db.from('follows').select('follower_id').eq('follower_id',me.id).eq('following_id',uid).maybeSingle();
+    isFollowing=!!f.data;
+    setupFollowBtn();
+  }else if(me&&me.id===uid){
+    $('editProfileBtn').hidden=false;
+  }
+
+  $('status').hidden=true;$('profileView').hidden=false;
+}
+
+function renderProfile(p){
+  $('pName').textContent=p.full_name||'Unnamed user';
+  $('pUsername').textContent=p.username?('@'+p.username):'';
+  $('avatar').src=p.avatar_url||DEF_AV;
+  $('cover').style.backgroundImage='url("'+(p.cover_url||DEF_CV)+'")';
+  $('pBio').textContent=p.bio||'';
+  $('pBio').hidden=!p.bio;
+  $('statFollowers').textContent=p.followers_count||0;
+  $('statFollowing').textContent=p.following_count||0;
+  $('promptsHeading').textContent=(p.full_name||'Their')+"'s Prompts";
+
+  var rows=[];
+  if(p.occupation)rows.push('<div><span class="k">Occupation</span>'+esc(p.occupation)+'</div>');
+  if(p.education)rows.push('<div><span class="k">Education</span>'+esc(p.education)+'</div>');
+  if(p.city||p.country)rows.push('<div><span class="k">Location</span>'+esc([p.city,p.country].filter(Boolean).join(', '))+'</div>');
+  if(p.website_url)rows.push('<div><span class="k">Website</span><a href="'+esc(p.website_url)+'" target="_blank" rel="noopener">'+esc(p.website_url)+'</a></div>');
+  $('infoList').innerHTML=rows.join('');
+}
+
+function setupFollowBtn(){
+  var b=$('followBtn');b.hidden=false;
+  updateFollowBtnUi();
+  b.onclick=async function(){
+    b.disabled=true;
+    if(isFollowing){
+      var r=await db.from('follows').delete().eq('follower_id',me.id).eq('following_id',target);
+      if(!r.error){isFollowing=false;$('statFollowers').textContent=Math.max((+$('statFollowers').textContent||1)-1,0)}
+    }else{
+      var r2=await db.from('follows').insert({follower_id:me.id,following_id:target});
+      if(!r2.error){isFollowing=true;$('statFollowers').textContent=(+$('statFollowers').textContent||0)+1}
+    }
+    updateFollowBtnUi();
+    b.disabled=false;
+  };
+}
+function updateFollowBtnUi(){
+  var b=$('followBtn');
+  b.textContent=isFollowing?'Following':'Follow';
+  b.classList.toggle('following',isFollowing);
+}
+
+function renderGrid(list){
+  if(!list.length){$('emptyNote').hidden=false;$('grid').hidden=true;return}
+  $('grid').hidden=false;
+  $('grid').innerHTML=list.map(cardHtml).join('');
+}
+function cardHtml(p){
+  var mine=me&&p.user_id===me.id;
+  var media='';
+  if(p.category==='image'&&p.media_url)media='<div class="p-media"><img src="'+esc(p.media_url)+'" alt=""></div>';
+  else if(p.category==='video'&&p.media_url)media='<div class="p-media"><video src="'+esc(p.media_url)+'" controls></video></div>';
+  else if(p.category==='audio'&&p.media_url)media='<div class="p-media"><audio src="'+esc(p.media_url)+'" controls></audio></div>';
+  else if(p.category==='website')media='<div class="p-site">'+(p.website_image_url?'<img src="'+esc(p.website_image_url)+'" alt="">':'')+'<span>'+esc(p.website_url||'')+'</span></div>';
+  var actions='<button class="btn" data-copy="'+p.id+'" type="button">Copy</button><a class="btn" href="prompts.html">Open in Prompts</a>';
+  if(mine)actions+='<a class="btn" href="prompts.html?edit='+p.id+'">Edit</a><button class="btn" data-del="'+p.id+'" type="button">Delete</button>';
+  return '<article class="card prompt-card">'+
+    '<div class="p-top"><span class="badge">'+CAT_LABEL[p.category]+'</span></div>'+
+    '<h3 class="p-title">'+esc(p.title)+'</h3>'+
+    '<p class="p-body">'+esc(p.body)+'</p>'+
+    media+
+    '<div class="p-actions">'+actions+'</div>'+
+    '<div class="p-stats"><span class="views-note" style="margin-left:0">❤ '+(p.likes_count||0)+'</span><span class="views-note">💬 '+(p.comments_count||0)+'</span><span class="views-note">'+(p.views_count||0)+' views</span></div>'+
+    '</article>';
+}
+
+$('grid').addEventListener('click',async function(e){
+  var copyBtn=e.target.closest('[data-copy]');
+  var delBtn=e.target.closest('[data-del]');
+  if(copyBtn){var el=copyBtn;await PH.copyText((await db.from('prompts').select('body').eq('id',el.getAttribute('data-copy')).single()).data.body);el.textContent='Copied ✓';setTimeout(()=>el.textContent='Copy',1200)}
+  if(delBtn){
+    if(!confirm('Delete this prompt? This cannot be undone.'))return;
+    var r=await db.from('prompts').delete().eq('id',delBtn.getAttribute('data-del'));
+    if(!r.error)init();
+  }
+});
+
+init();
+})();
+</script>
+</body>
+</html>

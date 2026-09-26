@@ -87,6 +87,7 @@
 
       <div class="footer-row">
         <button class="btn primary" id="saveProfile" type="button">Save changes</button>
+        <a class="btn" id="viewPublicBtn" href="#" hidden>View public profile</a>
         <span id="profileMsg" class="msg"></span>
       </div>
     </div>
@@ -142,6 +143,8 @@ async function load(){
 }
 async function enter(user){
   me=user;showProfile();
+  $('viewPublicBtn').href='profile.html?u='+user.id;
+  $('viewPublicBtn').hidden=false;
   var r=await db.from('profiles').select('full_name,username,avatar_url,cover_url,bio,website_url,country,city,phone_number,occupation,education').eq('id',user.id).maybeSingle();
   if(r.error){$('status').hidden=false;$('profileView').hidden=true;$('status').textContent='Profile data could not be loaded: '+r.error.message;return}
   if(!r.data){
