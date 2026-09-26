@@ -195,7 +195,7 @@ async function enter(user){
 
 var CAT_LABEL={general:'General',image:'Image',video:'Video',audio:'Audio',website:'Website'};
 async function loadMyPrompts(uid){
-  var r=await db.from('prompts').select('id,title,category,body,media_url,website_url,website_image_url,created_at').eq('user_id',uid).order('created_at',{ascending:false});
+  var r=await db.from('prompts').select('id,title,category,body,media_url,website_url,website_image_url,views_count,likes_count,comments_count,created_at').eq('user_id',uid).order('created_at',{ascending:false});
   if(r.error){$('promptCount').textContent='Could not load your prompts.';return}
   renderMyPrompts(r.data||[]);
 }
@@ -214,6 +214,7 @@ function renderMyPrompts(list){
       '<p class="p-body">'+PH.esc(p.body)+'</p>'+
       media+
       '<div class="p-actions"><a class="btn" href="prompts.html?edit='+p.id+'">Edit</a><button class="btn" data-del-prompt="'+p.id+'" type="button">Delete</button></div>'+
+      '<div class="p-stats"><span class="views-note" style="margin-left:0">❤ '+(p.likes_count||0)+'</span><span class="views-note">💬 '+(p.comments_count||0)+'</span><span class="views-note">'+(p.views_count||0)+' views</span></div>'+
       '</article>';
   }).join('');
 }
