@@ -1,7 +1,7 @@
 /* =====================================================================
    PromptHub — shared theme
-   A digital bazaar for AI prompts: deep indigo-ink base, warm marigold
-   accent for value/CTAs, teal for "live/paid", a serif display face for
+   A digital bazaar for AI prompts: deep indigo-ink base, cool indigo-blue
+   accent for actions, teal for "live/paid", a serif display face for
    headings and stat numbers so it reads as a crafted marketplace rather
    than a generic SaaS dashboard.
    ===================================================================== */
@@ -15,8 +15,8 @@
   --line:#2A2F52;
   --text:#ECEAF6;
   --mute:#8D90B8;
-  --ember:#E8A33D;
-  --ember-ink:#3A2A08;
+  --ember:#7C8CFF;
+  --ember-ink:#07101F;
   --signal:#58C7A3;
   --alarm:#E8607A;
   --radius-lg:16px;
@@ -132,7 +132,7 @@ th{
 }
 td{padding:10px 12px !important;border-bottom:1px solid var(--line) !important;color:var(--text) !important}
 tr:last-child td{border-bottom:none !important}
-tr:hover td{background:rgba(232,163,61,.05)}
+tr:hover td{background:rgba(124,140,255,.05)}
 
 /* ---------- status text / badges ---------- */
 .ok,.msg.ok{color:var(--signal) !important}
