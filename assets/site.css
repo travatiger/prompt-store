@@ -16,6 +16,7 @@
 }
 
 *{box-sizing:border-box}
+img,video{max-width:100%}
 html{background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;transition:background .2s ease,color .2s ease}
 a{color:inherit;text-decoration:none}
@@ -134,7 +135,7 @@ input:focus,textarea:focus{outline:none}
 .prompt-card{padding:16px;display:flex;flex-direction:column;gap:10px}
 .p-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .p-author{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px}
-.p-author img{width:22px;height:22px;border-radius:50%;object-fit:cover;background:var(--soft)}
+.p-author img,.p-author-link img{width:22px;height:22px;border-radius:50%;object-fit:cover;background:var(--soft)}
 .badge{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;color:var(--muted);background:var(--soft);border:1px solid var(--border);border-radius:999px;padding:3px 9px}
 .p-title{font-size:15.5px;font-weight:700;margin:0}
 .p-body{font-size:13.5px;color:var(--muted);line-height:1.5;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
