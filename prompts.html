@@ -126,15 +126,6 @@ var CAT_LABEL={general:'General',image:'Image',video:'Video',audio:'Audio',websi
 
 PH.bindThemeToggle('themeBtn');
 
-async function ensureProfile(user){
-  if(!user)return;
-  var r=await db.from('profiles').select('id').eq('id',user.id).maybeSingle();
-  if(r.error)return;
-  if(!r.data){
-    await db.from('profiles').insert({id:user.id,full_name:user.user_metadata?.full_name||user.user_metadata?.name||'',username:'user_'+user.id.slice(0,8)});
-  }
-}
-
 /* ---------- tabs ---------- */
 $('tabs').addEventListener('click',function(e){
   var b=e.target.closest('.tab');if(!b)return;
@@ -389,7 +380,7 @@ $('saveBtn').onclick=async function(){
   var fresh=await db.auth.getUser();
   if(fresh.error||!fresh.data||!fresh.data.user){formMsg('Your session has expired. Please logout and login again from My Profile, then try saving.','err');return}
   me=fresh.data.user;
-  await ensureProfile(me);
+  await PH.ensureProfile(me);
   var title=$('pTitle').value.trim(),body=$('pBody').value.trim(),cat=currentFormCat();
   if(!title){formMsg('Please add a title.','err');return}
   if(!body){formMsg('Please write the prompt text.','err');return}
@@ -434,6 +425,8 @@ $('saveBtn').onclick=async function(){
 
 /* ---------- auth state (browsing works without login; only adding needs it) ---------- */
 async function init(){
+  var ok=await PH.requireCompleteProfile();
+  if(!ok)return;
   var s=await db.auth.getSession();
   me=s.data&&s.data.session?s.data.session.user:null;
   updateWhoami();

@@ -52,6 +52,9 @@
   </section>
 
   <section id="profileView" hidden>
+    <div class="card status" id="completeBanner" style="margin-bottom:14px;text-align:left;border-color:var(--danger)" hidden>
+      Please complete every field below (including a phone number and website) before you can browse or upload on PromptHub.
+    </div>
     <div class="card profile-card">
       <div class="cover-wrap" id="cover">
         <button class="cover-edit" id="coverBtn" type="button">Change cover</button>
@@ -67,6 +70,10 @@
           <input id="profileName" class="name-input" maxlength="120" placeholder="Your name">
           <div class="username-row"><span>@</span><input id="profileUsername" class="username-input" maxlength="32" placeholder="username"></div>
         </div>
+        <div class="profile-stats" id="ownStats" style="margin:10px 0 0">
+          <div class="stat"><b id="statFollowers">0</b><span>Followers</span></div>
+          <div class="stat"><b id="statFollowing">0</b><span>Following</span></div>
+        </div>
       </div>
 
       <div class="section">
@@ -76,9 +83,18 @@
 
       <div class="section">
         <div class="grid">
-          <div><label class="field-label">Country</label><input id="profileCountry" maxlength="80"></div>
+          <div>
+            <label class="field-label">Country</label>
+            <select id="profileCountry"><option value="">Select a country…</option></select>
+          </div>
           <div><label class="field-label">City</label><input id="profileCity" maxlength="80"></div>
-          <div><label class="field-label">Phone number</label><input id="profilePhone" maxlength="40"></div>
+          <div>
+            <label class="field-label">Phone number</label>
+            <div style="display:flex;gap:6px">
+              <span id="dialCode" style="padding:11px 10px;border:1px solid var(--border);border-radius:10px;background:var(--soft);color:var(--muted);font-size:13px;white-space:nowrap">+--</span>
+              <input id="profilePhone" style="flex:1;min-width:0" maxlength="20" placeholder="3001234567">
+            </div>
+          </div>
           <div><label class="field-label">Website</label><input id="profileWebsite" maxlength="300" placeholder="https://…"></div>
           <div><label class="field-label">Occupation</label><input id="profileOccupation" maxlength="120"></div>
           <div><label class="field-label">Education</label><input id="profileEducation" maxlength="160"></div>
@@ -120,6 +136,22 @@ function authMsg(text,kind){$('authMsg').textContent=text||'';$('authMsg').class
 function showAuth(){$('status').hidden=true;$('authView').hidden=false;$('profileView').hidden=true;$('logout').hidden=true}
 function showProfile(){$('status').hidden=true;$('authView').hidden=true;$('profileView').hidden=false;$('logout').hidden=false}
 
+(function populateCountries(){
+  var sel=$('profileCountry');
+  PH.COUNTRIES.forEach(function(c){
+    var o=document.createElement('option');
+    o.value=c.name;
+    o.textContent=PH.flagEmoji(c.iso2)+' '+c.name+' ('+c.dial+')';
+    sel.appendChild(o);
+  });
+})();
+function updateDialCode(){
+  var c=PH.countryByName($('profileCountry').value);
+  $('dialCode').textContent=c?c.dial:'+--';
+  return c;
+}
+$('profileCountry').onchange=updateDialCode;
+
 function fill(p){
   p=p||{};
   $('profileName').value=p.full_name||'';
@@ -127,12 +159,20 @@ function fill(p){
   $('profileBio').value=p.bio||'';
   $('profileCountry').value=p.country||'';
   $('profileCity').value=p.city||'';
-  $('profilePhone').value=p.phone_number||'';
   $('profileWebsite').value=p.website_url||'';
   $('profileOccupation').value=p.occupation||'';
   $('profileEducation').value=p.education||'';
   $('avatar').src=p.avatar_url||DEF_AV;
   $('cover').style.backgroundImage='url("'+(p.cover_url||DEF_CV)+'")';
+  $('statFollowers').textContent=p.followers_count||0;
+  $('statFollowing').textContent=p.following_count||0;
+
+  var c=updateDialCode();
+  var phone=p.phone_number||'';
+  if(c&&phone.indexOf(c.dial)===0){phone=phone.slice(c.dial.length).trim()}
+  $('profilePhone').value=phone;
+
+  $('completeBanner').hidden=PH.isProfileComplete(p);
 }
 
 async function load(){
@@ -145,14 +185,11 @@ async function enter(user){
   me=user;showProfile();
   $('viewPublicBtn').href='profile.html?u='+user.id;
   $('viewPublicBtn').hidden=false;
-  var r=await db.from('profiles').select('full_name,username,avatar_url,cover_url,bio,website_url,country,city,phone_number,occupation,education').eq('id',user.id).maybeSingle();
-  if(r.error){$('status').hidden=false;$('profileView').hidden=true;$('status').textContent='Profile data could not be loaded: '+r.error.message;return}
-  if(!r.data){
-    var ins=await db.from('profiles').insert({id:user.id,full_name:user.user_metadata?.full_name||user.user_metadata?.name||'',username:'user_'+user.id.slice(0,8)}).select().single();
-    if(ins.error){$('status').hidden=false;$('profileView').hidden=true;$('status').textContent=ins.error.message;return}
-    r={data:ins.data};
-  }
-  fill(r.data);
+  var prof=await PH.ensureProfile(user);
+  if(!prof){$('status').hidden=false;$('profileView').hidden=true;$('status').textContent='Profile data could not be loaded.';return}
+  var params=new URLSearchParams(location.search);
+  if(params.get('complete')==='1')$('completeBanner').hidden=false;
+  fill(prof);
   loadMyPrompts(user.id);
 }
 
@@ -197,22 +234,29 @@ $('signupForm').onsubmit=async function(e){e.preventDefault();var r=await db.aut
 $('forgot').onclick=async function(){var email=$('lEmail').value.trim();if(!email){authMsg('Enter your email first.','err');return}var r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});authMsg(r.error?r.error.message:'Password reset email sent.',r.error?'err':'ok')};
 
 async function save(){
+  var c=PH.countryByName($('profileCountry').value);
+  var localPhone=$('profilePhone').value.trim();
   var upd={
     full_name:$('profileName').value.trim(),
     username:$('profileUsername').value.trim()||null,
     bio:$('profileBio').value.trim(),
     country:$('profileCountry').value.trim(),
     city:$('profileCity').value.trim(),
-    phone_number:$('profilePhone').value.trim(),
+    phone_number:localPhone?((c?c.dial+' ':'')+localPhone):'',
     website_url:$('profileWebsite').value.trim(),
     occupation:$('profileOccupation').value.trim(),
     education:$('profileEducation').value.trim()
   };
   msg('Saving…','');
-  var r=await db.from('profiles').update(upd).eq('id',me.id);
+  var r=await db.from('profiles').update(upd).eq('id',me.id).select().single();
   if(r.error){msg(r.error.message,'err');return}
   msg('Saved ✓','ok');
-  setTimeout(function(){window.location.href='index.html'},700);
+  if(PH.isProfileComplete(r.data)){
+    $('completeBanner').hidden=true;
+    setTimeout(function(){window.location.href='index.html'},700);
+  }else{
+    $('completeBanner').hidden=false;
+  }
 }
 $('saveProfile').onclick=save;
 $('logout').onclick=async function(){await db.auth.signOut();showAuth()};

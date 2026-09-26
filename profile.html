@@ -74,6 +74,8 @@ PH.bindThemeToggle('themeBtn');
 function showError(t){$('status').hidden=false;$('status').textContent=t;$('profileView').hidden=true}
 
 async function init(){
+  var ok=await PH.requireCompleteProfile();
+  if(!ok)return;
   var s=await db.auth.getSession();
   me=s.data&&s.data.session?s.data.session.user:null;
 
