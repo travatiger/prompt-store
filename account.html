@@ -90,6 +90,17 @@
         <span id="profileMsg" class="msg"></span>
       </div>
     </div>
+
+    <div class="card" style="margin-top:18px;padding:20px 22px">
+      <div class="page-head" style="margin:0 0 14px">
+        <div>
+          <h1 style="font-size:18px">My Prompts</h1>
+          <p id="promptCount" style="margin:4px 0 0;color:var(--muted);font-size:13px">Loading…</p>
+        </div>
+        <a class="btn primary" href="prompts.html">+ New Prompt</a>
+      </div>
+      <div class="prompt-grid" id="myPromptsGrid"></div>
+    </div>
   </section>
 </main>
 
@@ -139,7 +150,41 @@ async function enter(user){
     r={data:ins.data};
   }
   fill(r.data);
+  loadMyPrompts(user.id);
 }
+
+var CAT_LABEL={general:'General',image:'Image',video:'Video',audio:'Audio',website:'Website'};
+async function loadMyPrompts(uid){
+  var r=await db.from('prompts').select('id,title,category,body,media_url,website_url,website_image_url,created_at').eq('user_id',uid).order('created_at',{ascending:false});
+  if(r.error){$('promptCount').textContent='Could not load your prompts.';return}
+  renderMyPrompts(r.data||[]);
+}
+function renderMyPrompts(list){
+  $('promptCount').textContent=list.length+' prompt'+(list.length===1?'':'s')+' uploaded';
+  if(!list.length){$('myPromptsGrid').innerHTML='<div class="empty-note">You haven\u2019t uploaded any prompts yet.</div>';return}
+  $('myPromptsGrid').innerHTML=list.map(function(p){
+    var media='';
+    if(p.category==='image'&&p.media_url)media='<div class="p-media"><img src="'+PH.esc(p.media_url)+'" alt=""></div>';
+    else if(p.category==='video'&&p.media_url)media='<div class="p-media"><video src="'+PH.esc(p.media_url)+'" controls></video></div>';
+    else if(p.category==='audio'&&p.media_url)media='<div class="p-media"><audio src="'+PH.esc(p.media_url)+'" controls></audio></div>';
+    else if(p.category==='website')media='<div class="p-site">'+(p.website_image_url?'<img src="'+PH.esc(p.website_image_url)+'" alt="">':'')+'<span>'+PH.esc(p.website_url||'')+'</span></div>';
+    return '<article class="card prompt-card">'+
+      '<div class="p-top"><span class="badge">'+CAT_LABEL[p.category]+'</span></div>'+
+      '<h3 class="p-title">'+PH.esc(p.title)+'</h3>'+
+      '<p class="p-body">'+PH.esc(p.body)+'</p>'+
+      media+
+      '<div class="p-actions"><a class="btn" href="prompts.html?edit='+p.id+'">Edit</a><button class="btn" data-del-prompt="'+p.id+'" type="button">Delete</button></div>'+
+      '</article>';
+  }).join('');
+}
+$('myPromptsGrid').addEventListener('click',async function(e){
+  var b=e.target.closest('[data-del-prompt]');if(!b)return;
+  if(!confirm('Delete this prompt? This cannot be undone.'))return;
+  var id=b.getAttribute('data-del-prompt');
+  var r=await db.from('prompts').delete().eq('id',id);
+  if(r.error){alert(r.error.message);return}
+  loadMyPrompts(me.id);
+});
 
 $('tabLogin').onclick=function(){$('tabLogin').classList.add('on');$('tabSignup').classList.remove('on');$('loginBox').hidden=false;$('signupBox').hidden=true;authMsg('')};
 $('tabSignup').onclick=function(){$('tabSignup').classList.add('on');$('tabLogin').classList.remove('on');$('loginBox').hidden=true;$('signupBox').hidden=false;authMsg('')};

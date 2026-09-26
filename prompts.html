@@ -321,7 +321,12 @@ async function init(){
   me=s.data&&s.data.session?s.data.session.user:null;
   updateWhoami();
   db.auth.onAuthStateChange(function(_e,session){me=session?session.user:null;updateWhoami();render()});
-  loadList();
+  await loadList();
+  var editId=new URLSearchParams(location.search).get('edit');
+  if(editId){
+    var p=all.find(x=>x.id===editId);
+    if(p&&me&&p.user_id===me.id){startEdit(editId)}
+  }
 }
 function updateWhoami(){
   $('whoami').textContent=me?('Logged in: '+(me.email||'')):'Not logged in';
