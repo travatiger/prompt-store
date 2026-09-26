@@ -164,6 +164,7 @@ async function save(){
   var r=await db.from('profiles').update(upd).eq('id',me.id);
   if(r.error){msg(r.error.message,'err');return}
   msg('Saved ✓','ok');
+  setTimeout(function(){window.location.href='index.html'},700);
 }
 $('saveProfile').onclick=save;
 $('logout').onclick=async function(){await db.auth.signOut();showAuth()};
