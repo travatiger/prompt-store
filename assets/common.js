@@ -238,6 +238,22 @@
     });
   }
 
+  async function mountLogo(mountId) {
+    var el = document.getElementById(mountId);
+    if (!el) return;
+    var DEF = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/><circle cx="20" cy="15" r="7" fill="%23a0a0a0"/><path d="M6 36c2-9 9.5-13.5 14-13.5S32 27 34 36" fill="%23a0a0a0"/></svg>';
+    var av = null;
+    try {
+      var s = await api.db.auth.getSession();
+      var user = s.data && s.data.session ? s.data.session.user : null;
+      if (user) {
+        var r = await api.db.from('profiles').select('avatar_url').eq('id', user.id).maybeSingle();
+        av = (r.data && r.data.avatar_url) || null;
+      }
+    } catch (e) {}
+    el.innerHTML = '<img src="' + esc(av || DEF) + '" alt="Your profile" style="width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--soft);display:block">';
+  }
+
   var api = {
     SUPABASE_URL: SUPABASE_URL,
     CONFIG: CONFIG,
@@ -255,6 +271,7 @@
     requiredProfileFields: REQUIRED_PROFILE_FIELDS,
     requireCompleteProfile: requireCompleteProfile,
     mountSearch: mountSearch,
+    mountLogo: mountLogo,
     db: null,
     initError: null
   };
