@@ -254,6 +254,104 @@
     el.innerHTML = '<img src="' + esc(av || DEF) + '" alt="Your profile" style="width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--soft);display:block">';
   }
 
+  /* ---------- time ago ---------- */
+  function timeAgo(iso) {
+    if (!iso) return '';
+    var d = new Date(iso).getTime();
+    if (isNaN(d)) return '';
+    var s = Math.max(0, Math.floor((Date.now() - d) / 1000));
+    if (s < 60) return 'now';
+    var m = Math.floor(s / 60); if (m < 60) return m + 'm';
+    var h = Math.floor(m / 60); if (h < 24) return h + 'h';
+    var days = Math.floor(h / 24); if (days < 30) return days + 'd';
+    var mo = Math.floor(days / 30); if (mo < 12) return mo + 'mo';
+    return Math.floor(mo / 12) + 'y';
+  }
+
+  /* ---------- verified badge ---------- */
+  function verifiedBadge(isVerified) {
+    if (!isVerified) return '';
+    return '<svg class="verified-badge" viewBox="0 0 24 24" fill="#3897f0" title="Verified"><path d="M12 2l2.4 2.2 3.2-.6.9 3.1 3 1.3-1 3.1 1 3.1-3 1.3-.9 3.1-3.2-.6L12 22l-2.4-2.2-3.2.6-.9-3.1-3-1.3 1-3.1-1-3.1 3-1.3.9-3.1 3.2.6z"/><path d="M8.5 12.2l2.3 2.3 4.5-4.7" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  /* ---------- blocking ---------- */
+  async function getBlockedSet(userId) {
+    var set = new Set();
+    if (!userId) return set;
+    try {
+      var r = await api.db.from('user_blocks').select('blocked_id').eq('blocker_id', userId);
+      (r.data || []).forEach(function (x) { set.add(x.blocked_id); });
+    } catch (e) {}
+    return set;
+  }
+
+  /* ---------- notifications bell ---------- */
+  var NOTIF_LABEL = {
+    like: 'liked your prompt',
+    comment: 'commented on your prompt',
+    reply: 'replied to your comment',
+    follow: 'started following you'
+  };
+  async function mountNotifications(mountId) {
+    var mount = document.getElementById(mountId);
+    if (!mount) return;
+    var s = await api.db.auth.getSession();
+    var user = s.data && s.data.session ? s.data.session.user : null;
+    if (!user) { mount.innerHTML = ''; return; }
+
+    mount.style.position = 'relative';
+    mount.innerHTML =
+      '<button class="theme-btn" id="phNotifBtn" type="button" aria-label="Notifications">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>' +
+      '<span id="phNotifDot" class="notif-dot" hidden></span>' +
+      '</button>' +
+      '<div id="phNotifPanel" class="notif-panel" style="display:none">' +
+      '<div id="phNotifList" class="notif-list"><div class="comment-loading" style="padding:12px">Loading…</div></div>' +
+      '</div>';
+
+    var btn = document.getElementById('phNotifBtn');
+    var panel = document.getElementById('phNotifPanel');
+    var dot = document.getElementById('phNotifDot');
+    var loaded = false;
+
+    async function refreshCount() {
+      var r = await api.db.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
+      dot.hidden = !(r.count && r.count > 0);
+    }
+    async function loadList() {
+      var r = await api.db.from('notifications')
+        .select('id,type,is_read,created_at,prompt_id,actor:profiles!notifications_actor_id_fkey(id,username,full_name,avatar_url)')
+        .eq('user_id', user.id).order('created_at', { ascending: false }).limit(30);
+      var list = r.error ? [] : (r.data || []);
+      var listEl = document.getElementById('phNotifList');
+      if (!listEl) return;
+      if (!list.length) { listEl.innerHTML = '<div class="comment-loading" style="padding:12px">No notifications yet.</div>'; return; }
+      var DEF = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
+      listEl.innerHTML = list.map(function (n) {
+        var a = n.actor || {};
+        var name = a.username ? ('@' + esc(a.username)) : esc(a.full_name || 'Someone');
+        var href = n.type === 'follow' ? ('profile.html?u=' + esc(a.id || '')) : (n.prompt_id ? 'prompts.html?view=' + esc(n.prompt_id) : 'prompts.html');
+        return '<a class="notif-item' + (n.is_read ? '' : ' unread') + '" href="' + href + '">' +
+          '<img src="' + esc(a.avatar_url || DEF) + '" alt="">' +
+          '<div><b>' + name + '</b> ' + (NOTIF_LABEL[n.type] || '') + '<span class="notif-time">' + timeAgo(n.created_at) + '</span></div>' +
+          '</a>';
+      }).join('');
+    }
+    btn.onclick = async function () {
+      var opening = panel.style.display !== 'block';
+      panel.style.display = opening ? 'block' : 'none';
+      if (opening) {
+        if (!loaded) { loaded = true; await loadList(); }
+        dot.hidden = true;
+        await api.db.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
+      }
+    };
+    document.addEventListener('click', function (e) {
+      if (!mount.contains(e.target)) panel.style.display = 'none';
+    });
+    refreshCount();
+  }
+
   var api = {
     SUPABASE_URL: SUPABASE_URL,
     CONFIG: CONFIG,
@@ -272,6 +370,10 @@
     requireCompleteProfile: requireCompleteProfile,
     mountSearch: mountSearch,
     mountLogo: mountLogo,
+    timeAgo: timeAgo,
+    verifiedBadge: verifiedBadge,
+    getBlockedSet: getBlockedSet,
+    mountNotifications: mountNotifications,
     db: null,
     initError: null
   };
