@@ -96,12 +96,14 @@ async function init(){
   $('statPrompts').textContent=list.length;
   renderGrid(list);
 
-  if(me&&me.id!==uid){
+  $('followBtn').hidden=true;
+  $('editProfileBtn').hidden=true;
+  if(me&&String(me.id)===String(uid)){
+    $('editProfileBtn').hidden=false;
+  }else if(me){
     var f=await db.from('follows').select('follower_id').eq('follower_id',me.id).eq('following_id',uid).maybeSingle();
     isFollowing=!!f.data;
     setupFollowBtn();
-  }else if(me&&me.id===uid){
-    $('editProfileBtn').hidden=false;
   }
 
   $('status').hidden=true;$('profileView').hidden=false;
