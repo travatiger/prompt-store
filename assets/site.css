@@ -176,4 +176,11 @@ input:focus,textarea:focus{outline:none}
 .info-list{display:flex;flex-direction:column;gap:9px;font-size:13.5px}
 .info-list .k{color:var(--muted);display:inline-block;min-width:88px}
 .follow-btn.following{background:var(--soft);color:var(--text)}
+.person-row{display:flex;align-items:center;gap:10px;padding:9px 6px;border-radius:10px}
+.person-row:hover{background:var(--soft)}
+.person-row img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:var(--soft);flex:none}
+.person-row .info{flex:1;min-width:0}
+.person-row .info b{display:block;font-size:13.5px}
+.person-row .info span{display:block;font-size:12px;color:var(--muted)}
+.person-row .btn{padding:6px 12px;font-size:12.5px;flex:none}
 
