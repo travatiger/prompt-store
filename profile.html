@@ -27,7 +27,6 @@
   <div class="card status" id="status">Loading…</div>
 
   <section id="profileView" hidden>
-    <div style="font-size:10px;color:var(--muted);text-align:right;margin-bottom:4px">build-check: v4 — <span id="debugMe">checking session…</span></div>
     <div class="card profile-card">
       <div class="cover-wrap" id="cover"></div>
       <div class="profile-main">
@@ -80,7 +79,6 @@ async function init(){
   if(!ok)return;
   var s=await db.auth.getSession();
   me=s.data&&s.data.session?s.data.session.user:null;
-  $('debugMe').textContent=me?('logged in as: '+(me.email||me.id)):'not logged in';
 
   var uid=new URLSearchParams(location.search).get('u');
   if(!uid){
@@ -100,7 +98,6 @@ async function init(){
 
   $('followBtn').hidden=true;
   $('editProfileBtn').hidden=true;
-  $('debugMe').textContent+=' | viewing id: '+uid+' | match: '+(me?String(me.id)===String(uid):'n/a');
   if(me&&String(me.id)===String(uid)){
     $('editProfileBtn').hidden=false;
   }else if(me){
