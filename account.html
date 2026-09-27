@@ -11,7 +11,7 @@
 <body>
 <nav class="nav">
   <div class="nav-inner">
-    <a class="logo" href="index.html">Prompt<span>Hub</span></a>
+    <a class="logo" href="account.html" id="navLogo"></a>
     <div class="nav-right">
       <a class="back" href="index.html">Home</a>
       <a class="back" href="prompts.html">Prompts</a>
@@ -133,6 +133,7 @@ var DEF_CV='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" view
 
 PH.bindThemeToggle('themeBtn');
 PH.mountSearch('phSearchMount');
+PH.mountLogo('navLogo');
 
 function msg(text,kind){$('profileMsg').textContent=text||'';$('profileMsg').className='msg '+(kind||'')}
 function authMsg(text,kind){$('authMsg').textContent=text||'';$('authMsg').className='msg '+(kind||'')}
@@ -277,7 +278,7 @@ async function upload(file,kind){
   var field=kind==='avatar'?'avatar_url':'cover_url',obj={};obj[field]=url;
   var r=await db.from('profiles').update(obj).eq('id',me.id);
   if(r.error){msg(r.error.message,'err');return}
-  if(kind==='avatar'){$('avatar').src=url}else{$('cover').style.backgroundImage='url("'+url+'")'}
+  if(kind==='avatar'){$('avatar').src=url;PH.mountLogo('navLogo')}else{$('cover').style.backgroundImage='url("'+url+'")'}
   msg((kind==='avatar'?'Profile picture':'Cover picture')+' updated ✓','ok');
 }
 $('avatarBtn').onclick=function(){$('avatarFile').click()};

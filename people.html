@@ -11,7 +11,7 @@
 <body>
 <nav class="nav">
   <div class="nav-inner">
-    <a class="logo" href="index.html">Prompt<span>Hub</span></a>
+    <a class="logo" href="account.html" id="navLogo"></a>
     <div class="nav-right">
       <a class="back" href="prompts.html">Prompts</a>
       <a class="back" href="account.html">My Profile</a>
@@ -44,6 +44,7 @@ var DEF_AV='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" view
 
 PH.bindThemeToggle('themeBtn');
 PH.mountSearch('phSearchMount');
+PH.mountLogo('navLogo');
 
 async function init(){
   var ok=await PH.requireCompleteProfile();
