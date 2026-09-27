@@ -15,6 +15,7 @@
     <div class="nav-right">
       <a class="back" href="people.html">People</a>
       <div id="phSearchMount"></div>
+      <div id="phNotifMount"></div>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode">
         <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         <svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
@@ -41,6 +42,17 @@
     <button class="tab" data-cat="website" type="button">Website</button>
   </div>
 
+  <div class="sort-row">
+    <select id="sortSelect">
+      <option value="new">Newest</option>
+      <option value="popular">Most liked</option>
+      <option value="viewed">Most viewed</option>
+      <option value="trending">Trending this week</option>
+    </select>
+    <button class="tab" id="savedToggle" type="button" data-on="0">🔖 Saved</button>
+    <span id="tagFilterNote" class="tab" style="cursor:default" hidden></span>
+  </div>
+
   <!-- Add / Edit form (one place for both) -->
   <section class="card prompt-form" id="formCard" hidden>
     <h2 id="formTitle">New prompt</h2>
@@ -59,6 +71,9 @@
 
     <label>Prompt</label>
     <textarea id="pBody" maxlength="4000" placeholder="Write the full prompt text here…"></textarea>
+
+    <label>Tags <span style="text-transform:none;font-weight:400;color:var(--muted)">(comma separated, optional)</span></label>
+    <input type="text" id="pTags" maxlength="200" placeholder="e.g. marketing, chatbot, logo">
 
     <!-- Image -->
     <div class="media-field" id="fieldImage" hidden>
@@ -111,8 +126,14 @@
     </div>
   </section>
 
+  <div id="featuredWrap" hidden>
+    <div class="featured-strip">⭐ Featured</div>
+    <div class="prompt-grid" id="featuredGrid"></div>
+  </div>
+
   <div class="card status" id="status">Loading…</div>
   <div class="prompt-grid" id="grid" hidden></div>
+  <div class="load-more-row" id="loadMoreRow" hidden><button class="btn" id="loadMoreBtn" type="button">Load more</button></div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -120,19 +141,33 @@
 <script>
 (function(){'use strict';
 var PH=window.PH,db=PH.db,$=id=>document.getElementById(id),esc=PH.esc;
-var me=null,all=[],activeCat='all',editingId=null;
+var me=null,all=[],featured=[],activeCat='all',editingId=null,sortMode='new',showSavedOnly=false,activeTag=null;
+var blockedSet=new Set(),myBookmarks=new Set();
 var files={image:null,video:null,audio:null,siteImg:null};
 var CAT_LABEL={general:'General',image:'Image',video:'Video',audio:'Audio',website:'Website'};
+var PAGE_SIZE=12;
+var page=0,noMore=false,loading=false;
+
+var SELECT_COLS='id,user_id,title,category,body,media_url,website_url,website_image_url,views_count,likes_count,comments_count,tags,is_featured,created_at,updated_at,profiles(username,full_name,avatar_url,is_verified)';
 
 PH.bindThemeToggle('themeBtn');
 PH.mountSearch('phSearchMount');
 PH.mountLogo('navLogo');
+PH.mountNotifications('phNotifMount');
 
 /* ---------- tabs ---------- */
 $('tabs').addEventListener('click',function(e){
   var b=e.target.closest('.tab');if(!b)return;
   document.querySelectorAll('#tabs .tab').forEach(t=>t.classList.remove('on'));
-  b.classList.add('on');activeCat=b.getAttribute('data-cat');render();
+  b.classList.add('on');activeCat=b.getAttribute('data-cat');resetAndReload();
+});
+$('sortSelect').addEventListener('change',function(){sortMode=this.value;resetAndReload()});
+$('savedToggle').addEventListener('click',function(){
+  if(!me){formMsgTop('Please login from My Profile to view saved prompts.','err');return}
+  showSavedOnly=!showSavedOnly;
+  this.setAttribute('data-on',showSavedOnly?'1':'0');
+  this.classList.toggle('on',showSavedOnly);
+  resetAndReload();
 });
 
 /* ---------- category picker inside form ---------- */
@@ -169,7 +204,7 @@ wireFile('siteImgBtn','siteImgFile','siteImgName','siteImg','siteImgPreview');
 /* ---------- open / close form ---------- */
 function resetForm(){
   editingId=null;$('editId').value='';$('formTitle').textContent='New prompt';
-  $('pTitle').value='';$('pBody').value='';$('pWebsite').value='';
+  $('pTitle').value='';$('pBody').value='';$('pWebsite').value='';$('pTags').value='';
   document.querySelectorAll('#catPicker button').forEach(x=>x.classList.remove('on'));
   document.querySelector('#catPicker button[data-cat="general"]').classList.add('on');
   updateMediaFields('general');
@@ -189,24 +224,78 @@ function formMsgTop(t,k){$('status').hidden=false;$('status').textContent=t;$('s
 
 /* ---------- load list ---------- */
 var myLikes=new Set(),commentsCache={},openComments=new Set(),viewedThisLoad=new Set();
-async function loadList(){
-  var r=await db.from('prompts').select('id,user_id,title,category,body,media_url,website_url,website_image_url,views_count,likes_count,comments_count,created_at,profiles(username,full_name,avatar_url)').order('created_at',{ascending:false});
-  if(r.error){$('status').hidden=false;$('status').textContent='Could not load prompts: '+r.error.message;return}
-  all=r.data||[];await loadMyLikes();render();
+
+function resetAndReload(){
+  page=0;noMore=false;all=[];
+  $('grid').innerHTML='';$('grid').hidden=true;
+  loadPage(true);
 }
+
+async function loadFeatured(){
+  var r=await db.from('prompts').select(SELECT_COLS).eq('is_featured',true).order('created_at',{ascending:false}).limit(6);
+  featured=r.error?[]:(r.data||[]);
+  featured=featured.filter(p=>!blockedSet.has(p.user_id));
+  $('featuredWrap').hidden=!featured.length;
+  $('featuredGrid').innerHTML=featured.map(p=>cardHtml(p,true)).join('');
+}
+
+async function loadPage(first){
+  if(loading||noMore)return;
+  loading=true;
+  if(first){$('status').hidden=false;$('status').className='card status';$('status').textContent='Loading…'}
+  $('loadMoreRow').hidden=true;
+
+  var list=[];
+  if(showSavedOnly){
+    var bm=await db.from('prompt_bookmarks').select('prompt_id').eq('user_id',me.id).order('created_at',{ascending:false}).range(page*PAGE_SIZE,page*PAGE_SIZE+PAGE_SIZE-1);
+    var ids=(bm.data||[]).map(x=>x.prompt_id);
+    if(!ids.length){noMore=true}
+    else{
+      var q=db.from('prompts').select(SELECT_COLS).in('id',ids);
+      if(activeCat!=='all')q=q.eq('category',activeCat);
+      var r=await q;
+      list=r.error?[]:(r.data||[]);
+      list.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
+    }
+  }else{
+    var q2=db.from('prompts').select(SELECT_COLS);
+    if(activeCat!=='all')q2=q2.eq('category',activeCat);
+    if(activeTag)q2=q2.contains('tags',[activeTag]);
+    if(sortMode==='popular')q2=q2.order('likes_count',{ascending:false});
+    else if(sortMode==='viewed')q2=q2.order('views_count',{ascending:false});
+    else if(sortMode==='trending'){
+      var weekAgo=new Date(Date.now()-7*24*60*60*1000).toISOString();
+      q2=q2.gte('created_at',weekAgo).order('likes_count',{ascending:false});
+    }else{
+      q2=q2.order('created_at',{ascending:false});
+    }
+    q2=q2.range(page*PAGE_SIZE,page*PAGE_SIZE+PAGE_SIZE-1);
+    var r2=await q2;
+    if(r2.error){$('status').hidden=false;$('status').textContent='Could not load prompts: '+r2.error.message;loading=false;return}
+    list=r2.data||[];
+  }
+
+  list=list.filter(p=>!blockedSet.has(p.user_id));
+  if(list.length<PAGE_SIZE)noMore=true;
+  all=all.concat(list);
+  page++;
+  loading=false;
+  await loadMyLikes();
+  render();
+}
+
 async function loadMyLikes(){
-  myLikes=new Set();
   if(!me)return;
   var r=await db.from('prompt_likes').select('prompt_id').eq('user_id',me.id);
   if(!r.error&&r.data)r.data.forEach(x=>myLikes.add(x.prompt_id));
 }
 function render(){
-  var list=activeCat==='all'?all:all.filter(p=>p.category===activeCat);
   $('status').hidden=true;
-  if(!list.length){$('status').hidden=false;$('status').className='card status';$('status').textContent='No prompts here yet.';$('grid').hidden=true;return}
+  if(!all.length){$('status').hidden=false;$('status').className='card status';$('status').textContent=showSavedOnly?'No saved prompts yet.':'No prompts here yet.';$('grid').hidden=true;$('loadMoreRow').hidden=true;return}
   $('grid').hidden=false;
-  $('grid').innerHTML=list.map(cardHtml).join('');
-  list.forEach(p=>markViewed(p.id));
+  $('grid').innerHTML=all.map(p=>cardHtml(p,false)).join('');
+  $('loadMoreRow').hidden=noMore;
+  all.forEach(p=>markViewed(p.id));
 }
 function markViewed(id){
   if(viewedThisLoad.has(id))return;
@@ -223,7 +312,16 @@ function heartIcon(filled){
     ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.3-9.3-8.2C1 10 1.7 6.6 4.6 5.1 7 3.9 9.6 4.8 12 7.4c2.4-2.6 5-3.5 7.4-2.3 2.9 1.5 3.6 4.9 1.9 7.7C18.7 16.7 12 21 12 21z"/></svg>'
     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6.7-4.3-9.3-8.2C1 10 1.7 6.6 4.6 5.1 7 3.9 9.6 4.8 12 7.4c2.4-2.6 5-3.5 7.4-2.3 2.9 1.5 3.6 4.9 1.9 7.7C18.7 16.7 12 21 12 21z"/></svg>';
 }
-function cardHtml(p){
+function bookmarkIcon(filled){
+  return filled
+    ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z"/></svg>';
+}
+function tagsHtml(p){
+  if(!p.tags||!p.tags.length)return '';
+  return '<div class="tag-row">'+p.tags.map(t=>'<span class="tag-chip'+(activeTag===t?' on':'')+'" data-tag="'+esc(t)+'">#'+esc(t)+'</span>').join('')+'</div>';
+}
+function cardHtml(p,isFeatured){
   var mine=me&&p.user_id===me.id;
   var author=p.profiles||{};
   var avatar=author.avatar_url||'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
@@ -235,19 +333,24 @@ function cardHtml(p){
   var actions='<button class="btn" data-copy="'+p.id+'" type="button">Copy</button>';
   if(mine)actions+='<button class="btn" data-edit="'+p.id+'" type="button">Edit</button><button class="btn" data-del="'+p.id+'" type="button">Delete</button>';
   var liked=myLikes.has(p.id);
+  var saved=myBookmarks.has(p.id);
+  var edited=p.updated_at&&p.created_at&&(new Date(p.updated_at).getTime()-new Date(p.created_at).getTime()>60000);
   var stats='<div class="p-stats">'+
     '<button class="icon-btn'+(liked?' liked':'')+'" data-like="'+p.id+'" type="button">'+heartIcon(liked)+'<span>'+(p.likes_count||0)+'</span></button>'+
     '<button class="icon-btn" data-comments-toggle="'+p.id+'" type="button">💬<span>'+(p.comments_count||0)+'</span></button>'+
-    '<button class="icon-btn" data-share="'+p.id+'" type="button">🔗<span>Share</span></button>'+
-    '<span class="views-note">'+(p.views_count||0)+' views</span>'+
+    '<button class="icon-btn'+(saved?' liked':'')+'" data-bookmark="'+p.id+'" type="button">'+bookmarkIcon(saved)+'</button>'+
+    '<button class="icon-btn" data-share="'+p.id+'" type="button">🔗</button>'+
+    '<button class="icon-btn" data-report="'+p.id+'" type="button">🚩</button>'+
+    '<span class="views-note">'+(p.views_count||0)+' views'+(edited?' · <span class="p-edited">edited</span>':'')+'</span>'+
     '</div>';
   var commentsHtml=openComments.has(p.id)?commentsPanelHtml(p.id):'';
   return '<article class="card prompt-card">'+
-    '<div class="p-top"><span class="badge">'+CAT_LABEL[p.category]+'</span>'+
-    '<a class="p-author-link" href="profile.html?u='+esc(p.user_id)+'"><img src="'+esc(avatar)+'" alt="">'+esc(author.username?('@'+author.username):(author.full_name||'User'))+'</a></div>'+
+    '<div class="p-top"><span class="badge">'+(isFeatured?'⭐ ':'')+CAT_LABEL[p.category]+'</span>'+
+    '<a class="p-author-link" href="profile.html?u='+esc(p.user_id)+'"><img src="'+esc(avatar)+'" alt="">'+esc(author.username?('@'+author.username):(author.full_name||'User'))+PH.verifiedBadge(author.is_verified)+'</a></div>'+
     '<h3 class="p-title">'+esc(p.title)+'</h3>'+
     '<p class="p-body">'+esc(p.body)+'</p>'+
     media+
+    tagsHtml(p)+
     '<div class="p-actions">'+actions+'</div>'+
     stats+
     commentsHtml+
@@ -255,40 +358,62 @@ function cardHtml(p){
 }
 function commentsPanelHtml(id){
   var list=commentsCache[id];
-  var body=!list?'<div class="comment-loading">Loading comments…</div>':
-    (list.length?list.map(commentItemHtml).join(''):'<div class="comment-loading">No comments yet.</div>');
+  var body;
+  if(!list){body='<div class="comment-loading">Loading comments…</div>'}
+  else{
+    var top=list.filter(c=>!c.parent_id);
+    body=top.length?top.map(c=>commentItemHtml(c,list.filter(x=>x.parent_id===c.id))).join(''):'<div class="comment-loading">No comments yet.</div>';
+  }
   var form=me?'<div class="comment-form"><input type="text" maxlength="500" placeholder="Write a comment…" data-comment-input="'+id+'"><button class="btn primary" data-post-comment="'+id+'" type="button">Post</button></div>'
     :'<div class="comment-loading">Login from My Profile to comment.</div>';
   return '<div class="comments-panel" data-panel="'+id+'">'+body+form+'</div>';
 }
-function commentItemHtml(c){
+function commentItemHtml(c,replies){
   var author=c.profiles||{};
   var avatar=author.avatar_url||'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
   var mine=me&&c.user_id===me.id;
-  return '<div class="comment-item"><a href="profile.html?u='+esc(c.user_id)+'"><img src="'+esc(avatar)+'" alt=""></a><div><a href="profile.html?u='+esc(c.user_id)+'" style="color:inherit"><b>'+esc(author.username?('@'+author.username):(author.full_name||'User'))+'</b></a> '+esc(c.body)+'</div>'+
+  var html='<div class="comment-item"><a href="profile.html?u='+esc(c.user_id)+'"><img src="'+esc(avatar)+'" alt=""></a><div><a href="profile.html?u='+esc(c.user_id)+'" style="color:inherit"><b>'+esc(author.username?('@'+author.username):(author.full_name||'User'))+'</b></a> '+esc(c.body)+'</div>'+
+    (me?'<button class="c-reply" data-reply="'+c.id+'" data-prompt="'+c.prompt_id+'" type="button">Reply</button>':'')+
     (mine?'<button class="c-del" data-del-comment="'+c.id+'" data-comment-prompt="'+c.prompt_id+'" type="button">Delete</button>':'')+
     '</div>';
+  (replies||[]).forEach(function(r){
+    var ra=r.profiles||{};
+    var rav=ra.avatar_url||avatar;
+    var rmine=me&&r.user_id===me.id;
+    html+='<div class="comment-item reply-item"><a href="profile.html?u='+esc(r.user_id)+'"><img src="'+esc(rav)+'" alt=""></a><div><a href="profile.html?u='+esc(r.user_id)+'" style="color:inherit"><b>'+esc(ra.username?('@'+ra.username):(ra.full_name||'User'))+'</b></a> '+esc(r.body)+'</div>'+
+      (rmine?'<button class="c-del" data-del-comment="'+r.id+'" data-comment-prompt="'+r.prompt_id+'" type="button">Delete</button>':'')+
+      '</div>';
+  });
+  return html;
 }
 async function loadComments(id){
-  var r=await db.from('prompt_comments').select('id,prompt_id,user_id,body,created_at,profiles(username,full_name,avatar_url)').eq('prompt_id',id).order('created_at',{ascending:true});
+  var r=await db.from('prompt_comments').select('id,prompt_id,user_id,body,parent_id,created_at,profiles(username,full_name,avatar_url)').eq('prompt_id',id).order('created_at',{ascending:true});
   commentsCache[id]=r.error?[]:(r.data||[]);
   render();
 }
 
-$('grid').addEventListener('click',async function(e){
+function wireGrid(gridEl){
+gridEl.addEventListener('click',async function(e){
   var copyBtn=e.target.closest('[data-copy]');
   var editBtn=e.target.closest('[data-edit]');
   var delBtn=e.target.closest('[data-del]');
   var likeBtn=e.target.closest('[data-like]');
+  var bookmarkBtn=e.target.closest('[data-bookmark]');
+  var reportBtn=e.target.closest('[data-report]');
   var commentsToggleBtn=e.target.closest('[data-comments-toggle]');
   var shareBtn=e.target.closest('[data-share]');
   var postBtn=e.target.closest('[data-post-comment]');
   var delCommentBtn=e.target.closest('[data-del-comment]');
+  var replyBtn=e.target.closest('[data-reply]');
+  var tagChip=e.target.closest('[data-tag]');
 
-  if(copyBtn){var p=all.find(x=>x.id===copyBtn.getAttribute('data-copy'));if(p){await PH.copyText(p.body);copyBtn.textContent='Copied ✓';setTimeout(()=>copyBtn.textContent='Copy',1200)}}
+  if(tagChip){var t=tagChip.getAttribute('data-tag');activeTag=(activeTag===t)?null:t;$('tagFilterNote').hidden=!activeTag;$('tagFilterNote').textContent=activeTag?('Tag: #'+activeTag+' ✕'):'';resetAndReload();return}
+  if(copyBtn){var p=all.concat(featured).find(x=>x.id===copyBtn.getAttribute('data-copy'));if(p){await PH.copyText(p.body);copyBtn.textContent='Copied ✓';setTimeout(()=>copyBtn.textContent='Copy',1200)}}
   if(editBtn){startEdit(editBtn.getAttribute('data-edit'))}
   if(delBtn){doDelete(delBtn.getAttribute('data-del'))}
   if(likeBtn){toggleLike(likeBtn.getAttribute('data-like'))}
+  if(bookmarkBtn){toggleBookmark(bookmarkBtn.getAttribute('data-bookmark'))}
+  if(reportBtn){reportPrompt(reportBtn.getAttribute('data-report'))}
   if(commentsToggleBtn){
     var id=commentsToggleBtn.getAttribute('data-comments-toggle');
     if(openComments.has(id)){openComments.delete(id);render()}
@@ -298,32 +423,58 @@ $('grid').addEventListener('click',async function(e){
   if(postBtn){
     var pid=postBtn.getAttribute('data-post-comment');
     var input=document.querySelector('[data-comment-input="'+pid+'"]');
-    postComment(pid,input?input.value:'');
+    postComment(pid,input?input.value:'',null);
+  }
+  if(replyBtn){
+    var pid2=replyBtn.getAttribute('data-prompt');
+    var txt=prompt('Write your reply:');
+    if(txt&&txt.trim())postComment(pid2,txt,replyBtn.getAttribute('data-reply'));
   }
   if(delCommentBtn){deleteComment(delCommentBtn.getAttribute('data-del-comment'),delCommentBtn.getAttribute('data-comment-prompt'))}
 });
+}
+wireGrid($('grid'));
+wireGrid($('featuredGrid'));
 
 async function toggleLike(id){
   if(!me){formMsgTop('Please login from My Profile to like a prompt.','err');return}
-  var p=all.find(x=>x.id===id);if(!p)return;
+  var p=all.concat(featured).find(x=>x.id===id);if(!p)return;
   var wasLiked=myLikes.has(id);
   if(wasLiked){myLikes.delete(id);p.likes_count=Math.max((p.likes_count||1)-1,0)}
   else{myLikes.add(id);p.likes_count=(p.likes_count||0)+1}
-  render();
+  render();loadFeatured();
   var r=wasLiked?await db.from('prompt_likes').delete().eq('prompt_id',id).eq('user_id',me.id)
                :await db.from('prompt_likes').insert({prompt_id:id,user_id:me.id});
   if(r.error){
     if(wasLiked){myLikes.add(id);p.likes_count=(p.likes_count||0)+1}else{myLikes.delete(id);p.likes_count=Math.max((p.likes_count||1)-1,0)}
-    render();
+    render();loadFeatured();
   }
 }
-async function postComment(id,text){
+async function toggleBookmark(id){
+  if(!me){formMsgTop('Please login from My Profile to save a prompt.','err');return}
+  var was=myBookmarks.has(id);
+  if(was)myBookmarks.delete(id);else myBookmarks.add(id);
+  render();loadFeatured();
+  var r=was?await db.from('prompt_bookmarks').delete().eq('prompt_id',id).eq('user_id',me.id)
+          :await db.from('prompt_bookmarks').insert({prompt_id:id,user_id:me.id});
+  if(r.error){if(was)myBookmarks.add(id);else myBookmarks.delete(id);render();loadFeatured()}
+}
+async function reportPrompt(id){
+  if(!me){formMsgTop('Please login from My Profile to report a prompt.','err');return}
+  var reason=prompt('Why are you reporting this prompt?');
+  if(!reason||!reason.trim())return;
+  var r=await db.from('prompt_reports').insert({prompt_id:id,reporter_id:me.id,reason:reason.trim()});
+  if(!r.error){formMsgTop('Thanks — this has been reported for review.','ok');setTimeout(()=>{$('status').hidden=all.length>0;},1600)}
+}
+async function postComment(id,text,parentId){
   text=(text||'').trim();
   if(!text)return;
   if(!me){formMsgTop('Please login from My Profile to comment.','err');return}
-  var r=await db.from('prompt_comments').insert({prompt_id:id,user_id:me.id,body:text}).select('id,prompt_id,user_id,body,created_at,profiles(username,full_name,avatar_url)').single();
+  var row={prompt_id:id,user_id:me.id,body:text};
+  if(parentId)row.parent_id=parentId;
+  var r=await db.from('prompt_comments').insert(row).select('id,prompt_id,user_id,body,parent_id,created_at,profiles(username,full_name,avatar_url)').single();
   if(r.error)return;
-  var p=all.find(x=>x.id===id);if(p)p.comments_count=(p.comments_count||0)+1;
+  var p=all.concat(featured).find(x=>x.id===id);if(p)p.comments_count=(p.comments_count||0)+1;
   if(!commentsCache[id])commentsCache[id]=[];
   commentsCache[id].push(r.data);
   render();
@@ -332,25 +483,26 @@ async function deleteComment(commentId,promptId){
   if(!confirm('Delete this comment?'))return;
   var r=await db.from('prompt_comments').delete().eq('id',commentId);
   if(r.error)return;
-  var p=all.find(x=>x.id===promptId);if(p)p.comments_count=Math.max((p.comments_count||1)-1,0);
-  if(commentsCache[promptId])commentsCache[promptId]=commentsCache[promptId].filter(c=>c.id!==commentId);
+  var p=all.concat(featured).find(x=>x.id===promptId);if(p)p.comments_count=Math.max((p.comments_count||1)-1,0);
+  if(commentsCache[promptId])commentsCache[promptId]=commentsCache[promptId].filter(c=>c.id!==commentId&&c.parent_id!==commentId);
   render();
 }
 async function sharePrompt(id){
-  var p=all.find(x=>x.id===id);if(!p)return;
+  var p=all.concat(featured).find(x=>x.id===id);if(!p)return;
   var url=location.origin+location.pathname+'?view='+id;
   if(navigator.share){
     try{await navigator.share({title:p.title,text:p.title,url:url});return}catch(e){return}
   }
   await PH.copyText(url);
   formMsgTop('Link copied to clipboard ✓','ok');
-  setTimeout(function(){$('status').hidden=true},1500);
+  setTimeout(function(){$('status').hidden=all.length>0},1500);
 }
 
 function startEdit(id){
-  var p=all.find(x=>x.id===id);if(!p)return;
+  var p=all.concat(featured).find(x=>x.id===id);if(!p)return;
   resetForm();editingId=id;$('editId').value=id;$('formTitle').textContent='Edit prompt';
   $('pTitle').value=p.title||'';$('pBody').value=p.body||'';$('pWebsite').value=p.website_url||'';
+  $('pTags').value=(p.tags||[]).join(', ');
   document.querySelectorAll('#catPicker button').forEach(x=>x.classList.remove('on'));
   var catBtn=document.querySelector('#catPicker button[data-cat="'+p.category+'"]');
   if(catBtn)catBtn.classList.add('on');
@@ -366,7 +518,7 @@ async function doDelete(id){
   if(!confirm('Delete this prompt? This cannot be undone.'))return;
   var r=await db.from('prompts').delete().eq('id',id);
   if(r.error){alert(r.error.message);return}
-  all=all.filter(x=>x.id!==id);render();
+  all=all.filter(x=>x.id!==id);render();loadFeatured();
 }
 
 /* ---------- upload helper ---------- */
@@ -378,6 +530,10 @@ async function uploadFile(file,kind){
   return db.storage.from('product-media').getPublicUrl(path).data.publicUrl;
 }
 
+function parseTags(v){
+  return (v||'').split(',').map(s=>s.trim().toLowerCase().replace(/[^a-z0-9-]/g,'')).filter(Boolean).slice(0,10);
+}
+
 $('saveBtn').onclick=async function(){
   var fresh=await db.auth.getUser();
   if(fresh.error||!fresh.data||!fresh.data.user){formMsg('Your session has expired. Please logout and login again from My Profile, then try saving.','err');return}
@@ -387,10 +543,11 @@ $('saveBtn').onclick=async function(){
   if(!title){formMsg('Please add a title.','err');return}
   if(!body){formMsg('Please write the prompt text.','err');return}
 
-  var existing=editingId?all.find(x=>x.id===editingId):null;
+  var existing=editingId?all.concat(featured).find(x=>x.id===editingId):null;
   var mediaUrl=existing?existing.media_url:null;
   var websiteUrl=$('pWebsite').value.trim();
   var websiteImageUrl=existing?existing.website_image_url:null;
+  var tags=parseTags($('pTags').value);
 
   if(cat==='image'&&!files.image&&!mediaUrl){formMsg('Please choose an image for this prompt.','err');return}
   if(cat==='video'&&!files.video&&!mediaUrl){formMsg('Please choose a video for this prompt.','err');return}
@@ -409,21 +566,23 @@ $('saveBtn').onclick=async function(){
     if(cat!=='image'&&cat!=='video'&&cat!=='audio')mediaUrl=null;
     if(cat!=='website'){websiteUrl=null;websiteImageUrl=null}
 
-    var row={title:title,category:cat,body:body,media_url:mediaUrl,website_url:websiteUrl,website_image_url:websiteImageUrl};
+    var row={title:title,category:cat,body:body,media_url:mediaUrl,website_url:websiteUrl,website_image_url:websiteImageUrl,tags:tags};
     var r;
-    if(editingId)r=await db.from('prompts').update(row).eq('id',editingId).select('id,user_id,title,category,body,media_url,website_url,website_image_url,created_at,profiles(username,full_name,avatar_url)').single();
-    else r=await db.from('prompts').insert(Object.assign({user_id:me.id},row)).select('id,user_id,title,category,body,media_url,website_url,website_image_url,created_at,profiles(username,full_name,avatar_url)').single();
+    if(editingId)r=await db.from('prompts').update(row).eq('id',editingId).select(SELECT_COLS).single();
+    else r=await db.from('prompts').insert(Object.assign({user_id:me.id},row)).select(SELECT_COLS).single();
     if(r.error)throw new Error(r.error.message);
 
     if(editingId){all=all.map(x=>x.id===editingId?r.data:x)}else{all.unshift(r.data)}
     formMsg('Saved ✓','ok');
-    setTimeout(function(){$('formCard').hidden=true;resetForm();render()},400);
+    setTimeout(function(){$('formCard').hidden=true;resetForm();render();loadFeatured()},400);
   }catch(err){
     formMsg(err.message||'Something went wrong.','err');
   }finally{
     $('saveBtn').disabled=false;
   }
 };
+
+$('loadMoreBtn').onclick=function(){loadPage(false)};
 
 /* ---------- auth state (browsing works without login; only adding needs it) ---------- */
 async function init(){
@@ -433,15 +592,26 @@ async function init(){
   me=s.data&&s.data.session?s.data.session.user:null;
   updateWhoami();
   db.auth.onAuthStateChange(function(_e,session){me=session?session.user:null;updateWhoami();loadMyLikes().then(render)});
-  await loadList();
+
+  if(me){
+    blockedSet=await PH.getBlockedSet(me.id);
+    var bm=await db.from('prompt_bookmarks').select('prompt_id').eq('user_id',me.id);
+    if(!bm.error)(bm.data||[]).forEach(x=>myBookmarks.add(x.prompt_id));
+  }
+  await loadFeatured();
+  await loadPage(true);
   var editId=new URLSearchParams(location.search).get('edit');
   if(editId){
-    var p=all.find(x=>x.id===editId);
-    if(p&&me&&p.user_id===me.id){startEdit(editId)}
+    var check=await db.from('prompts').select(SELECT_COLS).eq('id',editId).maybeSingle();
+    if(check.data&&me&&check.data.user_id===me.id){
+      if(!all.find(x=>x.id===editId))all.unshift(check.data);
+      startEdit(editId);
+    }
   }
 }
 function updateWhoami(){
   PH.mountLogo('navLogo');
+  PH.mountNotifications('phNotifMount');
 }
 init();
 })();
