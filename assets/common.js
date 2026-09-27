@@ -184,6 +184,60 @@
     return true;
   }
 
+  function mountSearch(mountId) {
+    var mount = document.getElementById(mountId);
+    if (!mount) return;
+    mount.style.position = 'relative';
+    mount.innerHTML =
+      '<button class="theme-btn" id="phSearchBtn" type="button" aria-label="Search people">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
+      '</button>' +
+      '<div id="phSearchPanel" style="position:absolute;top:44px;right:0;width:280px;max-width:80vw;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:10px;display:none;z-index:60">' +
+      '<input id="phSearchInput" type="text" placeholder="Search name or username…" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--soft);color:var(--text);font:inherit;box-sizing:border-box">' +
+      '<div id="phSearchResults" style="max-height:300px;overflow:auto;margin-top:8px"></div>' +
+      '</div>';
+
+    var btn = document.getElementById('phSearchBtn');
+    var panel = document.getElementById('phSearchPanel');
+    var input = document.getElementById('phSearchInput');
+    var results = document.getElementById('phSearchResults');
+
+    btn.onclick = function () {
+      var opening = panel.style.display !== 'block';
+      panel.style.display = opening ? 'block' : 'none';
+      if (opening) input.focus();
+    };
+    document.addEventListener('click', function (e) {
+      if (!mount.contains(e.target)) panel.style.display = 'none';
+    });
+
+    var timer = null;
+    input.addEventListener('input', function () {
+      var q = input.value.trim();
+      clearTimeout(timer);
+      if (!q) { results.innerHTML = ''; return; }
+      timer = setTimeout(async function () {
+        var safe = q.replace(/[%,]/g, '');
+        var r = await api.db.from('profiles')
+          .select('id,full_name,username,avatar_url')
+          .or('full_name.ilike.%' + safe + '%,username.ilike.%' + safe + '%')
+          .limit(15);
+        var list = r.error ? [] : (r.data || []);
+        if (!list.length) {
+          results.innerHTML = '<div style="padding:8px 6px;color:var(--muted);font-size:13px">No users found.</div>';
+          return;
+        }
+        results.innerHTML = list.map(function (u) {
+          var av = u.avatar_url || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
+          return '<a href="profile.html?u=' + esc(u.id) + '" style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:10px;text-decoration:none;color:inherit">' +
+            '<img src="' + esc(av) + '" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--soft)">' +
+            '<div style="min-width:0"><b style="display:block;font-size:13.5px">' + esc(u.full_name || 'User') + '</b><span style="display:block;font-size:12px;color:var(--muted)">' + (u.username ? '@' + esc(u.username) : '') + '</span></div>' +
+            '</a>';
+        }).join('');
+      }, 250);
+    });
+  }
+
   var api = {
     SUPABASE_URL: SUPABASE_URL,
     CONFIG: CONFIG,
@@ -200,6 +254,7 @@
     isProfileComplete: isProfileComplete,
     requiredProfileFields: REQUIRED_PROFILE_FIELDS,
     requireCompleteProfile: requireCompleteProfile,
+    mountSearch: mountSearch,
     db: null,
     initError: null
   };
