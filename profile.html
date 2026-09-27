@@ -42,9 +42,10 @@
       <div class="section" style="padding-top:8px">
         <div class="profile-stats">
           <div class="stat"><b id="statPrompts">0</b><span>Prompts</span></div>
-          <div class="stat"><b id="statFollowers">0</b><span>Followers</span></div>
-          <div class="stat"><b id="statFollowing">0</b><span>Following</span></div>
+          <button class="stat" id="followersBtn" type="button" style="border:0;background:none;cursor:pointer;font:inherit;text-align:left;padding:0"><b id="statFollowers">0</b><span>Followers</span></button>
+          <button class="stat" id="followingBtn" type="button" style="border:0;background:none;cursor:pointer;font:inherit;text-align:left;padding:0"><b id="statFollowing">0</b><span>Following</span></button>
         </div>
+        <div class="card" id="peopleList" style="margin:12px 0 0;padding:8px;display:flex;flex-direction:column;gap:2px" hidden></div>
         <p id="pBio" style="color:var(--muted);font-size:14px;line-height:1.6;margin:10px 0 14px"></p>
         <div class="info-list" id="infoList"></div>
         <div style="margin-top:16px">
@@ -124,6 +125,66 @@ function renderProfile(p){
   if(p.website_url)rows.push('<div><span class="k">Website</span><a href="'+esc(p.website_url)+'" target="_blank" rel="noopener">'+esc(p.website_url)+'</a></div>');
   $('infoList').innerHTML=rows.join('');
 }
+
+/* ---------- followers / following list (for following-back) ---------- */
+var openPanel=null,myFollowingSet=null;
+$('followersBtn').onclick=function(){togglePeople('followers')};
+$('followingBtn').onclick=function(){togglePeople('following')};
+
+async function togglePeople(kind){
+  if(openPanel===kind){openPanel=null;$('peopleList').hidden=true;return}
+  openPanel=kind;
+  $('peopleList').hidden=false;
+  $('peopleList').innerHTML='<div class="comment-loading" style="padding:10px">Loading…</div>';
+
+  if(me&&!myFollowingSet){
+    var mf=await db.from('follows').select('following_id').eq('follower_id',me.id);
+    myFollowingSet=new Set((mf.data||[]).map(function(x){return x.following_id}));
+  }
+
+  var rows;
+  if(kind==='followers'){
+    var r=await db.from('follows').select('follower_id,profiles!follows_follower_id_fkey(id,full_name,username,avatar_url)').eq('following_id',target);
+    rows=(r.data||[]).map(function(x){return x.profiles}).filter(Boolean);
+  }else{
+    var r2=await db.from('follows').select('following_id,profiles!follows_following_id_fkey(id,full_name,username,avatar_url)').eq('follower_id',target);
+    rows=(r2.data||[]).map(function(x){return x.profiles}).filter(Boolean);
+  }
+  if(!rows.length){$('peopleList').innerHTML='<div class="comment-loading" style="padding:10px">No one here yet.</div>';return}
+  $('peopleList').innerHTML=rows.map(personRowHtml).join('');
+}
+
+function personRowHtml(u){
+  var avatar=u.avatar_url||DEF_AV;
+  var isMe=me&&me.id===u.id;
+  var following=myFollowingSet&&myFollowingSet.has(u.id);
+  var action='';
+  if(!isMe&&me)action='<button class="btn'+(following?'':' primary')+'" data-toggle-follow="'+u.id+'" type="button">'+(following?'Following':'Follow back')+'</button>';
+  return '<div class="person-row">'+
+    '<a href="profile.html?u='+esc(u.id)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none;color:inherit">'+
+    '<img src="'+esc(avatar)+'" alt="">'+
+    '<div class="info"><b>'+esc(u.full_name||'User')+'</b><span>'+(u.username?'@'+esc(u.username):'')+'</span></div>'+
+    '</a>'+action+
+    '</div>';
+}
+
+$('peopleList').addEventListener('click',async function(e){
+  var b=e.target.closest('[data-toggle-follow]');
+  if(!b)return;
+  e.preventDefault();
+  var uid=b.getAttribute('data-toggle-follow');
+  var already=myFollowingSet.has(uid);
+  b.disabled=true;
+  if(already){
+    var r=await db.from('follows').delete().eq('follower_id',me.id).eq('following_id',uid);
+    if(!r.error){myFollowingSet.delete(uid)}
+  }else{
+    var r2=await db.from('follows').insert({follower_id:me.id,following_id:uid});
+    if(!r2.error){myFollowingSet.add(uid)}
+  }
+  var kind=openPanel;openPanel=null;togglePeople(kind);
+  if(uid===target){var f=await db.from('follows').select('follower_id').eq('follower_id',me.id).eq('following_id',target).maybeSingle();isFollowing=!!f.data;updateFollowBtnUi()}
+});
 
 function setupFollowBtn(){
   var b=$('followBtn');b.hidden=false;
