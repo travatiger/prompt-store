@@ -360,6 +360,64 @@
     refreshCount();
   }
 
+  /* ---------- site notices: announcement, ban, warnings, admin link ---------- */
+  async function mountNotices() {
+    if (!api.db) return;
+    var box = document.getElementById('phNotices');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'phNotices';
+      document.body.insertBefore(box, document.body.firstChild);
+    }
+    box.innerHTML = '';
+    function bar(cls, html) {
+      var d = document.createElement('div');
+      d.className = 'notice-bar ' + cls;
+      d.innerHTML = html;
+      box.appendChild(d);
+      return d;
+    }
+    try {
+      var a = await api.db.rpc('ph_get_announcement');
+      var text = a && a.data;
+      if (text && sessionStorage.getItem('ph-ann-dismissed') !== text) {
+        var ab = bar('', '<span>' + esc(text) + '</span><button class="btn" type="button">OK</button>');
+        ab.querySelector('button').onclick = function () {
+          try { sessionStorage.setItem('ph-ann-dismissed', text); } catch (e) {}
+          ab.remove();
+        };
+      }
+    } catch (e) {}
+    try {
+      var s = await api.db.auth.getSession();
+      if (!s.data || !s.data.session) return;
+      var st = await api.db.rpc('ph_my_status');
+      var m = st && st.data;
+      if (m && m.banned) {
+        var until = m.permanent ? 'permanently' : 'until ' + new Date(m.until).toLocaleString();
+        bar('danger', '<span>🚫 Your account is banned ' + until + '. You can browse, but you cannot post, comment, like or follow.' + (m.reason ? ' Reason: ' + esc(m.reason) : '') + '</span>');
+      }
+      if (m && m.warnings && m.warnings.length) {
+        m.warnings.forEach(function (w) {
+          var wb = bar('warn', '<span>⚠️ Warning from the admins: ' + esc(w.reason || 'Please follow the community rules.') + '</span><button class="btn" type="button">I understand</button>');
+          wb.querySelector('button').onclick = async function () {
+            await api.db.rpc('ph_ack_warning', { p_id: w.id });
+            wb.remove();
+          };
+        });
+      }
+      var adm = await api.db.rpc('ph_is_admin');
+      if (adm && adm.data === true) {
+        var nr = document.querySelector('.nav-right');
+        if (nr && !document.getElementById('phAdminLink')) {
+          var l = document.createElement('a');
+          l.id = 'phAdminLink'; l.className = 'back'; l.href = 'admin.html'; l.textContent = 'Admin';
+          nr.insertBefore(l, nr.firstChild);
+        }
+      }
+    } catch (e) {}
+  }
+
   var api = {
     SUPABASE_URL: SUPABASE_URL,
     CONFIG: CONFIG,
@@ -382,6 +440,7 @@
     verifiedBadge: verifiedBadge,
     getBlockedSet: getBlockedSet,
     mountNotifications: mountNotifications,
+    mountNotices: mountNotices,
     db: null,
     initError: null
   };
@@ -396,4 +455,5 @@
   }
 
   window.PH = api;
+  setTimeout(function () { mountNotices(); }, 0);
 })();
