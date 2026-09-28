@@ -316,7 +316,9 @@
 
     async function refreshCount() {
       var r = await api.db.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
-      dot.hidden = !(r.count && r.count > 0);
+      if (r.error) console.error('Notifications count error:', r.error);
+      var d = document.getElementById('phNotifDot');
+      if (d && panel.style.display !== 'block') d.hidden = !(r.count && r.count > 0);
     }
     async function loadList() {
       var r = await api.db.from('notifications')
@@ -325,6 +327,7 @@
       var list = r.error ? [] : (r.data || []);
       var listEl = document.getElementById('phNotifList');
       if (!listEl) return;
+      if (r.error) { console.error('Notifications load error:', r.error); listEl.innerHTML = '<div class="comment-loading" style="padding:12px">Could not load notifications: ' + esc(r.error.message || 'unknown error') + '</div>'; return; }
       if (!list.length) { listEl.innerHTML = '<div class="comment-loading" style="padding:12px">No notifications yet.</div>'; return; }
       var DEF = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
       listEl.innerHTML = list.map(function (n) {
@@ -341,14 +344,19 @@
       var opening = panel.style.display !== 'block';
       panel.style.display = opening ? 'block' : 'none';
       if (opening) {
-        if (!loaded) { loaded = true; await loadList(); }
+        await loadList();
         dot.hidden = true;
         await api.db.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
       }
     };
-    document.addEventListener('click', function (e) {
+    if (window.__phNotifDocHandler) document.removeEventListener('click', window.__phNotifDocHandler);
+    window.__phNotifDocHandler = function (e) {
       if (!mount.contains(e.target)) panel.style.display = 'none';
-    });
+    };
+    document.addEventListener('click', window.__phNotifDocHandler);
+    if (window.__phNotifTimer) clearInterval(window.__phNotifTimer);
+    window.__phNotifTimer = setInterval(refreshCount, 30000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshCount(); });
     refreshCount();
   }
 
