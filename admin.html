@@ -56,28 +56,34 @@
 (function(){'use strict';
 var PH=window.PH,db=PH.db,$=function(id){return document.getElementById(id)},esc=PH.esc;
 var DEF='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
-var current='dashboard',PAGE=30;
+var current='dashboard',PAGE=30,adminId=null,detailUid=null,detailBack=null;
 var st={users:{q:'',items:[],more:false},prompts:{q:'',items:[],more:false},reportStatus:'open'};
+var KINDS=[['prompt','Add prompts'],['comment','Comment'],['like','Like'],['follow','Follow'],['bookmark','Save prompts'],['report','Report prompts']];
+var KIND_LABEL={};KINDS.forEach(function(k){KIND_LABEL[k[0]]=k[1]});
 
 PH.bindThemeToggle('themeBtn');
 PH.mountLogo('navLogo');
 
 function fmt(d){return d?new Date(d).toLocaleString():''}
-function toast(t,k){var el=$('toast');el.textContent=t||'';el.className='msg '+(k||'');if(t)setTimeout(function(){if(el.textContent===t)el.textContent=''},4000)}
+function toast(t,k){var el=$('toast');el.textContent=t||'';el.className='msg '+(k||'');if(t)setTimeout(function(){if(el.textContent===t)el.textContent=''},5000)}
 async function call(name,args){
   var r=await db.rpc(name,args||{});
   if(r.error){toast(r.error.message,'err');return null}
-  return r.data===undefined?true:(r.data===null?true:r.data);
+  return (r.data===undefined||r.data===null)?true:r.data;
 }
 function who(u,username,name){return username?('@'+esc(username)):esc(name||'User')}
+function short(t,n){t=String(t||'');return t.length>n?t.slice(0,n)+'…':t}
+function refAttrs(type,id,text){return ' data-rt="'+type+'" data-rid="'+id+'" data-rtext="'+esc(short(text,140))+'"'}
 
 /* ---------- access gate ---------- */
 async function init(){
   var s=await db.auth.getSession();
   var user=s.data&&s.data.session?s.data.session.user:null;
   if(!user){$('gate').innerHTML='Please <a href="account.html" style="text-decoration:underline">login</a> first.';return}
+  adminId=user.id;
   var r=await db.rpc('ph_is_admin');
-  if(r.error||r.data!==true){$('gate').textContent='Access denied. This page is for admins only.';return}
+  if(r.error){$('gate').textContent='Could not check admin access: '+r.error.message+' (was the admin SQL file run?)';return}
+  if(r.data!==true){$('gate').innerHTML='Access denied. This account ('+esc(user.email||'unknown email')+') is not an admin.';return}
   $('gate').hidden=true;$('app').hidden=false;
   show('dashboard');
 }
@@ -89,21 +95,17 @@ $('tabs').addEventListener('click',function(e){
 });
 
 var VIEWS={dashboard:vDashboard,reports:vReports,users:vUsers,prompts:vPrompts,comments:vComments,sanctions:vSanctions,log:vLog,settings:vSettings};
-async function show(tab){
-  current=tab;
-  $('view').innerHTML='<div class="card status">Loading…</div>';
-  await VIEWS[tab]();
-}
-function refresh(){show(current)}
+async function show(tab){current=tab;$('view').innerHTML='<div class="card status">Loading…</div>';await VIEWS[tab]()}
+function refresh(){show(current);if(detailUid)reloadDetail()}
 function empty(t){return '<div class="card status">'+t+'</div>'}
 
 /* ---------- dashboard ---------- */
 async function vDashboard(){
-  var s=await call('phadm_stats');if(!s||s===true){$('view').innerHTML=empty('Could not load stats. Did you run the admin SQL?');return}
+  var s=await call('phadm_stats');if(!s||s===true){$('view').innerHTML=empty('Could not load stats. Did you run the admin SQL files?');return}
   function box(n,l){return '<div class="card stat"><b>'+n+'</b><span>'+l+'</span></div>'}
   $('view').innerHTML='<div class="stat-grid">'+
     box(s.users,'Users')+box(s.new_users_7d,'New (7 days)')+box(s.prompts,'Prompts')+box(s.comments,'Comments')+
-    box(s.open_reports,'Open reports')+box(s.active_bans,'Active bans')+box(s.warnings,'Warnings issued')+
+    box(s.open_reports,'Open reports')+box(s.active_bans,'Blocked accounts')+box(s.restricted_users||0,'Restricted users')+box(s.warnings,'Active warnings')+
     '</div>';
 }
 
@@ -113,9 +115,10 @@ async function vReports(){
   var head='<div class="adm-search"><select id="repFilter">'+
     ['open','resolved','dismissed','all'].map(function(x){return '<option value="'+x+'"'+(x===st.reportStatus?' selected':'')+'>'+x[0].toUpperCase()+x.slice(1)+'</option>'}).join('')+
     '</select></div>';
-  if(!list||list===true||!list.length){$('view').innerHTML=head+empty('No reports here.');return}
+  if(!list||list===true||!list.length){$('view').innerHTML=head+empty('No reports here.');$('repFilter').onchange=function(){st.reportStatus=this.value;vReports()};return}
   $('view').innerHTML=head+list.map(function(r){
     var cls=r.status==='open'?'amber':(r.status==='resolved'?'green':'');
+    var nm=esc(r.author_username||r.author_name||'user');
     return '<div class="card adm-row"><div class="top"><div class="grow"><b>'+esc(r.prompt_title||'(prompt deleted)')+'</b>'+
       '<span>By '+who(0,r.author_username,r.author_name)+' · reported by '+who(0,r.reporter_username,'someone')+' · '+fmt(r.created_at)+'</span></div>'+
       '<span class="pill '+cls+'">'+esc(r.status)+'</span></div>'+
@@ -123,7 +126,7 @@ async function vReports(){
       '<div class="adm-actions">'+
       (r.status==='open'?'<button class="btn" data-act="resolve" data-id="'+r.id+'">Resolve</button><button class="btn" data-act="dismiss" data-id="'+r.id+'">Dismiss</button>':'<button class="btn" data-act="reopen" data-id="'+r.id+'">Reopen</button>')+
       (r.prompt_id?'<button class="btn danger" data-act="delpr" data-id="'+r.prompt_id+'">Delete prompt</button>':'')+
-      (r.author_id?'<button class="btn" data-act="warn" data-uid="'+r.author_id+'" data-name="'+esc(r.author_username||r.author_name||'user')+'">Warn author</button><button class="btn danger" data-act="ban" data-uid="'+r.author_id+'" data-name="'+esc(r.author_username||r.author_name||'user')+'">Ban author</button>':'')+
+      (r.author_id?'<button class="btn" data-act="warn" data-uid="'+r.author_id+'" data-name="'+nm+'"'+(r.prompt_id?refAttrs('prompt',r.prompt_id,r.prompt_title):'')+'>Warn author</button><button class="btn danger" data-act="ban" data-uid="'+r.author_id+'" data-name="'+nm+'">Ban author</button><button class="btn" data-act="manage" data-uid="'+r.author_id+'">Manage</button>':'')+
       '</div></div>';
   }).join('');
   $('repFilter').onchange=function(){st.reportStatus=this.value;vReports()};
@@ -137,12 +140,9 @@ async function loadUsers(reset){
   if(reset){st.users.items=[]}
   var list=await call('phadm_users',{p_search:st.users.q,p_limit:PAGE,p_offset:st.users.items.length});
   if(!list||list===true)list=[];
-  st.users.items=st.users.items.concat(list);
-  st.users.more=list.length===PAGE;
+  st.users.items=st.users.items.concat(list);st.users.more=list.length===PAGE;
 }
-async function vUsers(){
-  await loadUsers(true);renderUsers();
-}
+async function vUsers(){await loadUsers(true);renderUsers()}
 function renderUsers(){
   var items=st.users.items;
   var html=searchBar('userQ','Search name, @username or email',st.users.q);
@@ -150,19 +150,18 @@ function renderUsers(){
   html+=items.map(function(u){
     var pills='';
     if(u.is_admin)pills+='<span class="pill green">Admin</span>';
-    if(u.ban)pills+=u.ban.type==='ban_permanent'?'<span class="pill red">Permanent ban</span>':'<span class="pill red">Banned until '+fmt(u.ban.expires_at)+'</span>';
+    if(u.ban)pills+=u.ban.type==='ban_permanent'?'<span class="pill red">Blocked permanently</span>':'<span class="pill red">Blocked until '+fmt(u.ban.expires_at)+'</span>';
     if(u.warnings_count>0)pills+='<span class="pill amber">'+u.warnings_count+' warning'+(u.warnings_count>1?'s':'')+'</span>';
-    if(u.reports_count>0)pills+='<span class="pill">'+u.reports_count+' report'+(u.reports_count>1?'s':'')+' on prompts</span>';
+    if(u.restrictions_count>0)pills+='<span class="pill amber">'+u.restrictions_count+' restriction'+(u.restrictions_count>1?'s':'')+'</span>';
+    if(u.reports_count>0)pills+='<span class="pill">'+u.reports_count+' report'+(u.reports_count>1?'s':'')+'</span>';
     pills+='<span class="pill">'+u.prompts_count+' prompts</span>';
     var nm=esc(u.username||u.full_name||'user');
-    var acts='';
+    var acts='<button class="btn primary" data-act="manage" data-uid="'+u.id+'">Manage</button>';
     if(!u.is_admin){
       acts+='<button class="btn" data-act="warn" data-uid="'+u.id+'" data-name="'+nm+'">Warn</button>';
-      acts+='<button class="btn danger" data-act="ban" data-uid="'+u.id+'" data-name="'+nm+'">Ban</button>';
-      if(u.ban)acts+='<button class="btn" data-act="unban" data-uid="'+u.id+'">Unban</button>';
+      acts+='<button class="btn danger" data-act="ban" data-uid="'+u.id+'" data-name="'+nm+'">Block</button>';
+      if(u.ban)acts+='<button class="btn" data-act="unban" data-uid="'+u.id+'">Unblock</button>';
     }
-    acts+='<button class="btn" data-act="verify" data-uid="'+u.id+'" data-val="'+(u.is_verified?'0':'1')+'">'+(u.is_verified?'Remove verified':'Verify')+'</button>';
-    acts+='<a class="btn" href="profile.html?u='+esc(u.id)+'">Profile</a>';
     return '<div class="card adm-row"><div class="top"><img src="'+esc(u.avatar_url||DEF)+'" alt=""><div class="grow"><b>'+esc(u.full_name||'User')+PH.verifiedBadge(u.is_verified)+'</b><span>'+(u.username?'@'+esc(u.username)+' · ':'')+esc(u.email||'')+'</span><span>Joined '+fmt(u.created_at)+'</span></div></div>'+
       '<div>'+pills+'</div><div class="adm-actions">'+acts+'</div></div>';
   }).join('');
@@ -175,8 +174,7 @@ async function loadPrompts(reset){
   if(reset){st.prompts.items=[]}
   var list=await call('phadm_prompts',{p_search:st.prompts.q,p_limit:PAGE,p_offset:st.prompts.items.length});
   if(!list||list===true)list=[];
-  st.prompts.items=st.prompts.items.concat(list);
-  st.prompts.more=list.length===PAGE;
+  st.prompts.items=st.prompts.items.concat(list);st.prompts.more=list.length===PAGE;
 }
 async function vPrompts(){await loadPrompts(true);renderPrompts()}
 function renderPrompts(){
@@ -191,8 +189,8 @@ function renderPrompts(){
       '<div class="adm-actions">'+
       '<button class="btn" data-act="feature" data-id="'+p.id+'" data-val="'+(p.is_featured?'0':'1')+'">'+(p.is_featured?'Unfeature':'Feature')+'</button>'+
       '<button class="btn danger" data-act="delpr" data-id="'+p.id+'">Delete</button>'+
-      '<button class="btn" data-act="warn" data-uid="'+p.user_id+'" data-name="'+nm+'">Warn author</button>'+
-      '<button class="btn danger" data-act="ban" data-uid="'+p.user_id+'" data-name="'+nm+'">Ban author</button>'+
+      '<button class="btn" data-act="warn" data-uid="'+p.user_id+'" data-name="'+nm+'"'+refAttrs('prompt',p.id,p.title)+'>Warn author</button>'+
+      '<button class="btn" data-act="manage" data-uid="'+p.user_id+'">Manage author</button>'+
       '</div></div>';
   }).join('');
   if(st.prompts.more)html+='<div class="load-more-row"><button class="btn" data-act="more-prompts" type="button">Load more</button></div>';
@@ -204,26 +202,32 @@ async function vComments(){
   var list=await call('phadm_comments',{p_limit:60});
   if(!list||list===true||!list.length){$('view').innerHTML=empty('No comments yet.');return}
   $('view').innerHTML=list.map(function(c){
+    var nm=esc(c.username||'user');
     return '<div class="card adm-row"><div class="top"><div class="grow"><b>'+who(0,c.username,'User')+'</b><span>on “'+esc(c.prompt_title||'deleted prompt')+'” · '+fmt(c.created_at)+'</span></div></div>'+
       '<div class="body">'+esc(c.body)+'</div>'+
       '<div class="adm-actions"><button class="btn danger" data-act="delcm" data-id="'+c.id+'">Delete</button>'+
-      '<button class="btn" data-act="warn" data-uid="'+c.user_id+'" data-name="'+esc(c.username||'user')+'">Warn</button>'+
-      '<button class="btn danger" data-act="ban" data-uid="'+c.user_id+'" data-name="'+esc(c.username||'user')+'">Ban</button></div></div>';
+      '<button class="btn" data-act="warn" data-uid="'+c.user_id+'" data-name="'+nm+'"'+refAttrs('comment',c.id,c.body)+'>Warn for this comment</button>'+
+      '<button class="btn" data-act="manage" data-uid="'+c.user_id+'">Manage user</button></div></div>';
   }).join('');
 }
 
 /* ---------- sanctions ---------- */
-var TYPE_LABEL={warning:'Warning',ban_temporary:'Temporary ban',ban_permanent:'Permanent ban'};
+var TYPE_LABEL={warning:'Warning',ban_temporary:'Temporary block',ban_permanent:'Permanent block'};
+function sanctionState(s){
+  if(s.type==='warning')return s.revoked_at?'<span class="pill">Removed</span>':(s.acknowledged_at?'<span class="pill green">Seen by user</span>':'<span class="pill amber">Not seen yet</span>');
+  return s.active?'<span class="pill red">Active</span>':'<span class="pill">'+(s.revoked_at?'Lifted':'Expired')+'</span>';
+}
 async function vSanctions(){
   var list=await call('phadm_sanctions',{p_limit:100});
-  if(!list||list===true||!list.length){$('view').innerHTML=empty('No warnings or bans yet.');return}
+  if(!list||list===true||!list.length){$('view').innerHTML=empty('No warnings or blocks yet.');return}
   $('view').innerHTML=list.map(function(s){
-    var state=s.type==='warning'?(s.acknowledged_at?'<span class="pill green">Seen by user</span>':'<span class="pill amber">Not seen yet</span>')
-      :(s.active?'<span class="pill red">Active</span>':'<span class="pill">'+(s.revoked_at?'Lifted':'Expired')+'</span>');
     return '<div class="card adm-row"><div class="top"><div class="grow"><b>'+TYPE_LABEL[s.type]+' → '+who(0,s.user_username,s.user_name)+'</b>'+
-      '<span>By '+who(0,s.admin_username,'admin')+' · '+fmt(s.created_at)+(s.expires_at?' · until '+fmt(s.expires_at):'')+'</span></div>'+state+'</div>'+
+      '<span>By '+who(0,s.admin_username,'admin')+' · '+fmt(s.created_at)+(s.expires_at?' · until '+fmt(s.expires_at):'')+'</span></div>'+sanctionState(s)+'</div>'+
       (s.reason?'<div class="body">'+esc(s.reason)+'</div>':'')+
-      (s.active?'<div class="adm-actions"><button class="btn" data-act="unban" data-uid="'+s.user_id+'">Unban</button></div>':'')+'</div>';
+      (s.ref_text?'<div class="body" style="color:var(--muted)">About '+esc(s.ref_type)+': “'+esc(s.ref_text)+'”</div>':'')+
+      '<div class="adm-actions">'+
+      (s.active?'<button class="btn" data-act="revoke" data-id="'+s.id+'">'+(s.type==='warning'?'Remove warning':'Unblock')+'</button>':'')+
+      '<button class="btn" data-act="manage" data-uid="'+s.user_id+'">Manage user</button></div></div>';
   }).join('');
 }
 
@@ -239,41 +243,211 @@ async function vLog(){
 
 /* ---------- settings ---------- */
 async function vSettings(){
-  var cur=await db.rpc('ph_get_announcement');
-  var text=cur.data||'';
-  $('view').innerHTML='<div class="card adm-row"><h2 style="margin:0 0 6px;font-size:17px">Site announcement</h2>'+
-    '<p style="margin:0 0 10px;color:var(--muted);font-size:13px">Shows as a bar at the top of every page for all visitors. Leave empty and save to remove it.</p>'+
-    '<div class="adm-search" style="flex-direction:column"><textarea id="annText" maxlength="300" rows="3" style="border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;width:100%;box-sizing:border-box">'+esc(text)+'</textarea>'+
+  var cfg=await call('phadm_get_settings');
+  if(!cfg||cfg===true){$('view').innerHTML=empty('Could not load settings. Did you run the v2 admin SQL file?');return}
+  var admins=await call('phadm_admins');if(!admins||admins===true)admins=[];
+  var inp='border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;box-sizing:border-box';
+  $('view').innerHTML=
+    '<div class="card adm-row"><h2 style="margin:0 0 6px;font-size:17px">Automatic block after warnings</h2>'+
+    '<p style="margin:0 0 10px;color:var(--muted);font-size:13px">When a user has this many active warnings, they are blocked permanently. Removing warnings lowers the count. Set 0 to turn this off.</p>'+
+    '<div class="adm-search"><input id="warnLimit" type="number" min="0" max="50" value="'+esc(cfg.warn_limit)+'" style="'+inp+'"><button class="btn primary" data-act="save-limit" type="button">Save</button></div></div>'+
+    '<div class="card adm-row"><h2 style="margin:0 0 6px;font-size:17px">Site announcement</h2>'+
+    '<p style="margin:0 0 10px;color:var(--muted);font-size:13px">Shown as a bar at the top of every page. Leave empty and save to remove it.</p>'+
+    '<div class="adm-search" style="flex-direction:column"><textarea id="annText" maxlength="300" rows="3" style="'+inp+';width:100%">'+esc(cfg.announcement||'')+'</textarea>'+
     '<button class="btn primary" data-act="save-ann" type="button" style="align-self:flex-start">Save announcement</button></div></div>'+
-    '<div class="card adm-row"><h2 style="margin:0 0 6px;font-size:17px">Adding another admin</h2>'+
-    '<p style="margin:0;color:var(--muted);font-size:13px">For safety, admins are added only from the Supabase SQL Editor (see the last lines of the admin SQL file). Admin accounts cannot be warned or banned.</p></div>';
+    '<div class="card adm-row"><h2 style="margin:0 0 10px;font-size:17px">Admins</h2>'+
+    admins.map(function(a){
+      return '<div class="top" style="margin-bottom:8px"><div class="grow"><b>'+esc(a.full_name||a.username||'Admin')+'</b><span>'+esc(a.email||'')+'</span></div>'+
+        (a.user_id!==adminId?'<button class="btn danger" data-act="rm-admin" data-uid="'+a.user_id+'">Remove</button>':'<span class="pill green">You</span>')+'</div>';
+    }).join('')+
+    '<div class="adm-search" style="margin-top:12px"><input id="newAdmin" type="email" placeholder="Email of an existing account" style="'+inp+'"><button class="btn primary" data-act="add-admin" type="button">Add admin</button></div></div>';
 }
 
-/* ---------- sanction modal ---------- */
-function openSanction(uid,name,type){
+/* ---------- modal helper ---------- */
+function openModal(html,large){
   var back=document.createElement('div');back.className='modal-back';
-  back.innerHTML='<div class="card modal"><h2>Action on @'+esc(name)+'</h2>'+
-    '<label>Action</label><select id="mType"><option value="warning">Warning</option><option value="ban_temporary">Temporary ban</option><option value="ban_permanent">Permanent ban</option></select>'+
-    '<div id="mDaysWrap"><label>Ban length (days)</label><input id="mDays" type="number" min="1" max="3650" value="7"></div>'+
-    '<label>Reason (shown to the user)</label><textarea id="mReason" maxlength="300" placeholder="e.g. Spam / inappropriate content"></textarea>'+
-    '<div class="actions"><button class="btn primary" id="mOk" type="button">Apply</button><button class="btn" id="mCancel" type="button">Cancel</button><span class="msg" id="mMsg"></span></div></div>';
+  back.innerHTML='<div class="card modal'+(large?' modal-lg':'')+'">'+html+'</div>';
   document.body.appendChild(back);
+  back.addEventListener('click',function(e){if(e.target===back)back.remove()});
+  return back;
+}
+function msg(back,t){var m=back.querySelector('#mMsg');if(m){m.textContent=t;m.className='msg err'}}
+
+/* ---------- warn / block modal ---------- */
+function openSanction(uid,name,type,ref){
+  var back=openModal('<h2>Action on @'+esc(name)+'</h2>'+
+    '<label>Action</label><select id="mType"><option value="warning">Warning</option><option value="ban_temporary">Block account (temporary)</option><option value="ban_permanent">Block account (permanent)</option></select>'+
+    '<div id="mDaysWrap"><label>Block length (days)</label><input id="mDays" type="number" min="1" max="3650" value="7"></div>'+
+    (ref?'<label>About this '+esc(ref.type)+'</label><div class="ref-box">'+esc(ref.text)+'</div><label class="chk"><input type="checkbox" id="mDelRef"> Also delete this '+esc(ref.type)+'</label>':'')+
+    '<label>Reason (shown to the user)</label><textarea id="mReason" maxlength="300" placeholder="e.g. Spam / inappropriate content"></textarea>'+
+    '<div class="actions"><button class="btn primary" id="mOk" type="button">Apply</button><button class="btn" id="mCancel" type="button">Cancel</button><span class="msg" id="mMsg"></span></div>');
   var sel=back.querySelector('#mType');sel.value=type;
   function sync(){back.querySelector('#mDaysWrap').style.display=sel.value==='ban_temporary'?'block':'none'}
   sync();sel.onchange=sync;
   back.querySelector('#mCancel').onclick=function(){back.remove()};
-  back.addEventListener('click',function(e){if(e.target===back)back.remove()});
   back.querySelector('#mOk').onclick=async function(){
     var t=sel.value,days=parseInt(back.querySelector('#mDays').value,10);
-    if(t==='ban_temporary'&&!(days>=1)){back.querySelector('#mMsg').textContent='Enter number of days.';back.querySelector('#mMsg').className='msg err';return}
-    if(t==='ban_permanent'&&!confirm('Permanently ban @'+name+'?'))return;
+    if(t==='ban_temporary'&&!(days>=1)){msg(back,'Enter number of days.');return}
+    if(t==='ban_permanent'&&!confirm('Block @'+name+' permanently?'))return;
     this.disabled=true;
-    var r=await call('phadm_sanction',{p_user:uid,p_type:t,p_reason:back.querySelector('#mReason').value,p_days:t==='ban_temporary'?days:null});
-    if(r){back.remove();toast('Done ✓','ok');refresh()}else{this.disabled=false}
+    var del=ref&&back.querySelector('#mDelRef')&&back.querySelector('#mDelRef').checked;
+    var r=await call('phadm_sanction',{p_user:uid,p_type:t,p_reason:back.querySelector('#mReason').value,p_days:t==='ban_temporary'?days:null,
+      p_ref_type:ref?ref.type:null,p_ref_id:ref?ref.id:null,p_delete_ref:!!del});
+    if(r){
+      back.remove();
+      if(r.auto_banned)toast('Warning added. User reached '+r.warnings+' warnings and was blocked permanently.','ok');else toast('Done ✓','ok');
+      refresh();
+    }else{this.disabled=false}
   };
 }
 
-/* ---------- click handling ---------- */
+/* ---------- restrict modal ---------- */
+function openRestrict(uid,name,pre){
+  var back=openModal('<h2>Restrict @'+esc(name)+'</h2><p style="margin:0;color:var(--muted);font-size:13px">The user can still use the site, but not the actions you tick.</p>'+
+    KINDS.map(function(k){return '<label class="chk"><input type="checkbox" class="mKind" value="'+k[0]+'"'+(k[0]===pre?' checked':'')+'> '+k[1]+'</label>'}).join('')+
+    '<label>Duration</label><select id="mDur"><option value="0">Permanent (until you lift it)</option><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option><option value="custom">Custom days…</option></select>'+
+    '<div id="mCustomWrap" style="display:none"><input id="mCustom" type="number" min="1" max="3650" value="3"></div>'+
+    '<label>Reason (optional)</label><textarea id="mReason" maxlength="300"></textarea>'+
+    '<div class="actions"><button class="btn primary" id="mOk" type="button">Apply restriction</button><button class="btn" id="mCancel" type="button">Cancel</button><span class="msg" id="mMsg"></span></div>');
+  var dur=back.querySelector('#mDur');
+  dur.onchange=function(){back.querySelector('#mCustomWrap').style.display=dur.value==='custom'?'block':'none'};
+  back.querySelector('#mCancel').onclick=function(){back.remove()};
+  back.querySelector('#mOk').onclick=async function(){
+    var kinds=[].slice.call(back.querySelectorAll('.mKind')).filter(function(c){return c.checked}).map(function(c){return c.value});
+    if(!kinds.length){msg(back,'Tick at least one action.');return}
+    var days=dur.value==='custom'?parseInt(back.querySelector('#mCustom').value,10):parseInt(dur.value,10);
+    this.disabled=true;
+    var r=await call('phadm_restrict',{p_user:uid,p_kinds:kinds,p_reason:back.querySelector('#mReason').value,p_days:days>0?days:null});
+    if(r){back.remove();toast('Restriction applied ✓','ok');refresh()}else{this.disabled=false}
+  };
+}
+
+/* ---------- edit profile modal ---------- */
+var FIELDS=[['full_name','Full name'],['username','Username'],['bio','About'],['website_url','Website'],['occupation','Occupation'],['education','Education'],['city','City'],['country','Country']];
+function openEditProfile(uid,p){
+  var back=openModal('<h2>Edit profile</h2>'+
+    FIELDS.map(function(f){return '<label>'+f[1]+'</label>'+(f[0]==='bio'?'<textarea data-f="'+f[0]+'">'+esc(p[f[0]]||'')+'</textarea>':'<input data-f="'+f[0]+'" value="'+esc(p[f[0]]||'')+'">')}).join('')+
+    '<label>Profile photo</label><div class="file-row"><img class="preview-thumb" id="pvAv" src="'+esc(p.avatar_url||DEF)+'" alt=""><input type="file" id="avFile" accept="image/*"><button class="btn" id="avClear" type="button">Remove photo</button></div>'+
+    '<label>Cover photo</label><div class="file-row"><img class="preview-thumb" id="pvCv" src="'+esc(p.cover_url||DEF)+'" alt="" style="width:80px"><input type="file" id="cvFile" accept="image/*"><button class="btn" id="cvClear" type="button">Remove cover</button></div>'+
+    '<div class="actions"><button class="btn primary" id="mOk" type="button">Save</button><button class="btn" id="mCancel" type="button">Cancel</button><span class="msg" id="mMsg"></span></div>',true);
+  var avUrl=p.avatar_url||null,cvUrl=p.cover_url||null,avFile=null,cvFile=null;
+  back.querySelector('#avFile').onchange=function(e){avFile=e.target.files[0]||null;if(avFile)back.querySelector('#pvAv').src=URL.createObjectURL(avFile)};
+  back.querySelector('#cvFile').onchange=function(e){cvFile=e.target.files[0]||null;if(cvFile)back.querySelector('#pvCv').src=URL.createObjectURL(cvFile)};
+  back.querySelector('#avClear').onclick=function(){avUrl=null;avFile=null;back.querySelector('#pvAv').src=DEF};
+  back.querySelector('#cvClear').onclick=function(){cvUrl=null;cvFile=null;back.querySelector('#pvCv').src=DEF};
+  back.querySelector('#mCancel').onclick=function(){back.remove()};
+  async function up(file,kind){
+    var ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+    var path='prompts/'+adminId+'/admin-'+kind+'-'+Date.now()+'.'+ext;
+    var r=await db.storage.from('product-media').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});
+    if(r.error)throw new Error(r.error.message);
+    return db.storage.from('product-media').getPublicUrl(path).data.publicUrl;
+  }
+  back.querySelector('#mOk').onclick=async function(){
+    var btn=this;btn.disabled=true;
+    try{
+      if(avFile)avUrl=await up(avFile,'avatar');
+      if(cvFile)cvUrl=await up(cvFile,'cover');
+      var ch={};
+      back.querySelectorAll('[data-f]').forEach(function(el){
+        var k=el.getAttribute('data-f'),v=el.value.trim();
+        if(v!==String(p[k]||''))ch[k]=v===''?null:v;
+      });
+      if(avUrl!==(p.avatar_url||null))ch.avatar_url=avUrl;
+      if(cvUrl!==(p.cover_url||null))ch.cover_url=cvUrl;
+      if(!Object.keys(ch).length){back.remove();return}
+      var r=await call('phadm_update_profile',{p_user:uid,p_changes:ch});
+      if(r){back.remove();toast('Profile updated ✓','ok');refresh()}else{btn.disabled=false}
+    }catch(err){msg(back,err.message);btn.disabled=false}
+  };
+}
+
+/* ---------- manage user window ---------- */
+async function openDetail(uid){
+  if(detailBack)detailBack.remove();
+  detailUid=uid;
+  detailBack=openModal('<div class="status">Loading…</div>',true);
+  detailBack.addEventListener('click',function(e){if(e.target===detailBack){detailUid=null;detailBack=null}});
+  await reloadDetail();
+}
+function closeDetail(){if(detailBack)detailBack.remove();detailBack=null;detailUid=null}
+async function reloadDetail(){
+  if(!detailUid||!detailBack)return;
+  var d=await call('phadm_user_detail',{p_user:detailUid});
+  if(!d||d===true){closeDetail();return}
+  var p=d.profile||{},nm=esc(p.username||p.full_name||'user');
+  var activeBan=(d.sanctions||[]).filter(function(s){return s.type!=='warning'&&s.active})[0];
+  var warns=(d.sanctions||[]).filter(function(s){return s.type==='warning'&&s.active}).length;
+  var restrMap={};(d.restrictions||[]).forEach(function(r){if(r.active)restrMap[r.kind]=r});
+  var h='<div class="top" style="margin-bottom:8px"><img src="'+esc(p.avatar_url||DEF)+'" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover"><div class="grow"><b style="font-size:16px">'+esc(p.full_name||'User')+PH.verifiedBadge(p.is_verified)+'</b><span>'+(p.username?'@'+esc(p.username)+' · ':'')+esc(p.email||'')+'</span><span>'+d.counts.prompts+' prompts · '+d.counts.comments+' comments · '+d.counts.followers+' followers · '+d.counts.following+' following</span></div><button class="btn" data-d="close" type="button">Close</button></div>';
+  h+='<div>'+(p.is_admin?'<span class="pill green">Admin</span>':'')+
+    (activeBan?(activeBan.type==='ban_permanent'?'<span class="pill red">Blocked permanently</span>':'<span class="pill red">Blocked until '+fmt(activeBan.expires_at)+'</span>'):'<span class="pill green">Account active</span>')+
+    '<span class="pill '+(warns?'amber':'')+'">'+warns+' active warning'+(warns===1?'':'s')+'</span></div>';
+  if(!p.is_admin){
+    h+='<div class="sec">Account</div><div class="adm-actions">'+
+      '<button class="btn" data-d="warn">Warn</button>'+
+      '<button class="btn danger" data-d="ban">Block account…</button>'+
+      (activeBan?'<button class="btn" data-d="revoke" data-id="'+activeBan.id+'">Unblock account</button>':'')+
+      (warns?'<button class="btn" data-d="clearwarn">Remove all warnings</button>':'')+'</div>';
+    h+='<div class="sec">What this user can do</div>'+KINDS.map(function(k){
+      var r=restrMap[k[0]];
+      return '<div class="rrow"><span>'+k[1]+'</span>'+(r?'<span class="pill red">Restricted'+(r.expires_at?' until '+fmt(r.expires_at):'')+'</span><button class="btn" data-d="allow" data-kind="'+k[0]+'">Allow</button>':'<span class="pill green">Allowed</span><button class="btn danger" data-d="restrict" data-kind="'+k[0]+'">Restrict…</button>')+'</div>';
+    }).join('')+
+    '<div class="adm-actions"><button class="btn" data-d="restrict" data-kind="">Restrict several…</button>'+(Object.keys(restrMap).length?'<button class="btn" data-d="allowall">Allow everything</button>':'')+'</div>';
+  }
+  h+='<div class="sec">Profile</div><div class="adm-actions">'+
+    '<button class="btn" data-d="edit">Edit profile</button>'+
+    '<button class="btn" data-d="verify" data-val="'+(p.is_verified?'0':'1')+'">'+(p.is_verified?'Remove verified badge':'Give verified badge')+'</button>'+
+    '<button class="btn" data-d="rmavatar"'+(p.avatar_url?'':' disabled')+'>Remove photo</button>'+
+    '<button class="btn" data-d="rmcover"'+(p.cover_url?'':' disabled')+'>Remove cover</button>'+
+    '<a class="btn" href="profile.html?u='+esc(p.id)+'">Open profile</a></div>';
+  if(!p.is_admin){
+    h+='<div class="sec">Content and account</div><div class="adm-actions">'+
+      '<button class="btn danger" data-d="delprompts">Delete all prompts</button>'+
+      '<button class="btn danger" data-d="delcomments">Delete all comments</button>'+
+      '<button class="btn danger" data-d="delaccount">Delete account</button></div>';
+  }
+  h+='<div class="sec">History</div>'+((d.sanctions||[]).length?(d.sanctions.map(function(s){
+    return '<div class="hrow"><div><b>'+TYPE_LABEL[s.type]+'</b> '+sanctionState(s)+'<br><span style="color:var(--muted);font-size:12px">'+fmt(s.created_at)+(s.expires_at?' · until '+fmt(s.expires_at):'')+'</span>'+
+      (s.reason?'<br>'+esc(s.reason):'')+(s.ref_text?'<br><span style="color:var(--muted)">About '+esc(s.ref_type)+': “'+esc(s.ref_text)+'”</span>':'')+'</div>'+
+      (s.active?'<button class="btn" data-d="revoke" data-id="'+s.id+'">'+(s.type==='warning'?'Remove':'Unblock')+'</button>':'')+'</div>';
+  }).join('')):'<div style="color:var(--muted);font-size:13px">No warnings or blocks yet.</div>');
+  detailBack.firstChild.innerHTML=h;
+  detailBack.firstChild._d=d;
+}
+
+function detailClick(e){
+  var b=e.target.closest('[data-d]');if(!b||!detailBack||!detailBack.contains(b))return;
+  var a=b.getAttribute('data-d'),d=detailBack.firstChild._d||{},p=d.profile||{},nm=p.username||p.full_name||'user';
+  (async function(){
+    var ok;
+    if(a==='close'){closeDetail();return}
+    if(a==='warn'){openSanction(detailUid,nm,'warning');return}
+    if(a==='ban'){openSanction(detailUid,nm,'ban_temporary');return}
+    if(a==='restrict'){openRestrict(detailUid,nm,b.getAttribute('data-kind'));return}
+    if(a==='edit'){openEditProfile(detailUid,p);return}
+    if(a==='revoke'){ok=await call('phadm_revoke_sanction',{p_id:b.getAttribute('data-id')})}
+    else if(a==='clearwarn'){if(!confirm('Remove all active warnings of this user?'))return;ok=await call('phadm_clear_warnings',{p_user:detailUid})}
+    else if(a==='allow'){ok=await call('phadm_unrestrict',{p_user:detailUid,p_kind:b.getAttribute('data-kind')})}
+    else if(a==='allowall'){ok=await call('phadm_unrestrict',{p_user:detailUid,p_kind:null})}
+    else if(a==='verify'){ok=await call('phadm_set_verified',{p_user:detailUid,p_value:b.getAttribute('data-val')==='1'})}
+    else if(a==='rmavatar'){if(!confirm('Remove this user\'s profile photo?'))return;ok=await call('phadm_update_profile',{p_user:detailUid,p_changes:{avatar_url:null}})}
+    else if(a==='rmcover'){if(!confirm('Remove this user\'s cover photo?'))return;ok=await call('phadm_update_profile',{p_user:detailUid,p_changes:{cover_url:null}})}
+    else if(a==='delprompts'){if(!confirm('Delete ALL prompts of @'+nm+'? This cannot be undone.'))return;ok=await call('phadm_delete_user_content',{p_user:detailUid,p_what:'prompts'})}
+    else if(a==='delcomments'){if(!confirm('Delete ALL comments of @'+nm+'? This cannot be undone.'))return;ok=await call('phadm_delete_user_content',{p_user:detailUid,p_what:'comments'})}
+    else if(a==='delaccount'){
+      var typed=prompt('This permanently deletes the account and everything it owns.\nType the username to confirm: '+nm);
+      if(typed===null||typed.trim().toLowerCase()!==String(nm).toLowerCase()){if(typed!==null)toast('Username did not match — nothing deleted.','err');return}
+      ok=await call('phadm_delete_account',{p_user:detailUid});
+      if(ok){closeDetail();toast('Account deleted ✓','ok');show(current);return}
+    }
+    else return;
+    if(ok){toast('Done ✓','ok');refresh()}
+  })();
+}
+document.addEventListener('click',detailClick);
+
+/* ---------- click handling (tab content) ---------- */
 $('view').addEventListener('click',async function(e){
   var b=e.target.closest('[data-act]');if(!b)return;
   var act=b.getAttribute('data-act'),id=b.getAttribute('data-id'),uid=b.getAttribute('data-uid'),name=b.getAttribute('data-name');
@@ -282,21 +456,27 @@ $('view').addEventListener('click',async function(e){
   if(act==='search-promptQ'){st.prompts.q=$('promptQ').value.trim();await loadPrompts(true);renderPrompts();return}
   if(act==='more-users'){await loadUsers(false);renderUsers();return}
   if(act==='more-prompts'){await loadPrompts(false);renderPrompts();return}
-  if(act==='warn'){openSanction(uid,name,'warning');return}
+  if(act==='manage'){openDetail(uid);return}
+  if(act==='warn'){
+    var rt=b.getAttribute('data-rt');
+    openSanction(uid,name,'warning',rt?{type:rt,id:b.getAttribute('data-rid'),text:b.getAttribute('data-rtext')}:null);return}
   if(act==='ban'){openSanction(uid,name,'ban_temporary');return}
-  if(act==='unban'){if(!confirm('Lift this ban?'))return;ok=await call('phadm_unban',{p_user:uid})}
-  else if(act==='verify'){ok=await call('phadm_set_verified',{p_user:uid,p_value:b.getAttribute('data-val')==='1'})}
+  if(act==='unban'){if(!confirm('Unblock this account?'))return;ok=await call('phadm_unban',{p_user:uid})}
+  else if(act==='revoke'){ok=await call('phadm_revoke_sanction',{p_id:id})}
   else if(act==='feature'){ok=await call('phadm_set_featured',{p_id:id,p_value:b.getAttribute('data-val')==='1'})}
   else if(act==='delpr'){if(!confirm('Delete this prompt permanently (with its likes and comments)?'))return;ok=await call('phadm_delete_prompt',{p_id:id})}
   else if(act==='delcm'){if(!confirm('Delete this comment?'))return;ok=await call('phadm_delete_comment',{p_id:id})}
   else if(act==='resolve'||act==='dismiss'||act==='reopen'){
     var note=null;
     if(act!=='reopen'){note=prompt('Note (optional):','');if(note===null)return}
-    ok=await call('phadm_resolve_report',{p_id:id,p_status:act==='resolve'?'resolved':(act==='dismiss'?'dismissed':'open'),p_note:note})
+    ok=await call('phadm_resolve_report',{p_id:id,p_status:act==='resolve'?'resolved':(act==='dismiss'?'dismissed':'open'),p_note:note});
   }
-  else if(act==='save-ann'){ok=await call('phadm_set_announcement',{p_text:$('annText').value})}
+  else if(act==='save-ann'){ok=await call('phadm_set_announcement',{p_text:$('annText').value});if(ok)toast('Saved ✓','ok');return}
+  else if(act==='save-limit'){ok=await call('phadm_set_warn_limit',{p_limit:parseInt($('warnLimit').value,10)});if(ok)toast('Saved ✓','ok');return}
+  else if(act==='add-admin'){var em=$('newAdmin').value.trim();if(!em)return;ok=await call('phadm_add_admin',{p_email:em})}
+  else if(act==='rm-admin'){if(!confirm('Remove this admin?'))return;ok=await call('phadm_remove_admin',{p_user:uid})}
   else return;
-  if(ok){toast('Done ✓','ok');if(act==='save-ann')return;refresh()}
+  if(ok){toast('Done ✓','ok');refresh()}
 });
 
 $('view').addEventListener('keydown',function(e){
