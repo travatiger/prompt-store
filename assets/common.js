@@ -394,8 +394,23 @@
       var st = await api.db.rpc('ph_my_status');
       var m = st && st.data;
       if (m && m.banned) {
-        var until = m.permanent ? 'permanently' : 'until ' + new Date(m.until).toLocaleString();
-        bar('danger', '<span>🚫 Your account is banned ' + until + '. You can browse, but you cannot post, comment, like or follow.' + (m.reason ? ' Reason: ' + esc(m.reason) : '') + '</span>');
+        var until = m.permanent ? 'permanently' : ('until ' + new Date(m.until).toLocaleString());
+        if (!document.getElementById('phBanScreen')) {
+          var ov = document.createElement('div');
+          ov.id = 'phBanScreen'; ov.className = 'ban-screen';
+          ov.innerHTML = '<div class="card"><h1>🚫 Account blocked</h1><p>Your account has been blocked ' + esc(until) + '.</p>' +
+            (m.reason ? '<p><b>Reason:</b> ' + esc(m.reason) + '</p>' : '') +
+            '<p style="margin-top:14px">You can still log out, but you cannot use the site while blocked.</p>' +
+            '<button class="btn" id="phBanLogout" type="button">Logout</button></div>';
+          document.body.appendChild(ov);
+          var lb = document.getElementById('phBanLogout');
+          if (lb) lb.onclick = function () { api.db.auth.signOut().then(function () { location.href = 'account.html'; }); };
+        }
+      }
+      if (m && m.restrictions && m.restrictions.length) {
+        var names = { prompt: 'add prompts', comment: 'comment', like: 'like', follow: 'follow', bookmark: 'save prompts', report: 'report prompts' };
+        var list = m.restrictions.map(function (r) { return names[r.kind] || r.kind; }).join(', ');
+        bar('warn', '<span>🔒 The admins have restricted your account. You currently cannot: ' + esc(list) + '.</span>');
       }
       if (m && m.warnings && m.warnings.length) {
         m.warnings.forEach(function (w) {

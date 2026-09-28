@@ -258,3 +258,18 @@ input:focus,textarea:focus{outline:none}
 .modal select,.modal input,.modal textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);background:var(--soft);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px}
 .modal textarea{min-height:80px;resize:vertical}
 .modal .actions{display:flex;gap:8px;margin-top:16px;align-items:center;flex-wrap:wrap}
+
+.modal-lg{max-width:640px;max-height:90vh;overflow:auto}
+.modal .chk{display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;font-weight:500;color:var(--text)}
+.modal .chk input{width:auto}
+.ref-box{background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13px;word-break:break-word}
+.sec{margin:18px 0 8px;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.rrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:14px}
+.rrow>span:first-child{flex:1}
+.rrow .btn{padding:5px 12px;font-size:12.5px}
+.hrow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.hrow .btn{padding:5px 12px;font-size:12.5px;flex:none}
+.ban-screen{position:fixed;inset:0;z-index:300;background:var(--bg,#f6f6f6);display:flex;align-items:center;justify-content:center;padding:20px}
+.ban-screen .card{max-width:420px;text-align:center;padding:28px 22px}
+.ban-screen h1{margin:0 0 10px;font-size:22px}
+.ban-screen p{color:var(--muted);margin:6px 0}
