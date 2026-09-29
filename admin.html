@@ -39,6 +39,7 @@
     <div class="tabs admin-tabs" id="tabs">
       <button class="tab on" data-tab="dashboard" type="button">Dashboard</button>
       <button class="tab" data-tab="reports" type="button">Reports</button>
+      <button class="tab" data-tab="dmreports" type="button">Message reports</button>
       <button class="tab" data-tab="users" type="button">Users</button>
       <button class="tab" data-tab="prompts" type="button">Prompts</button>
       <button class="tab" data-tab="comments" type="button">Comments</button>
@@ -57,7 +58,7 @@
 var PH=window.PH,db=PH.db,$=function(id){return document.getElementById(id)},esc=PH.esc;
 var DEF='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
 var current='dashboard',PAGE=30,adminId=null,detailUid=null,detailBack=null;
-var st={users:{q:'',items:[],more:false},prompts:{q:'',items:[],more:false},reportStatus:'open'};
+var st={users:{q:'',items:[],more:false},prompts:{q:'',items:[],more:false},reportStatus:'open',dmReportStatus:'open'};
 var KINDS=[['prompt','Add prompts'],['comment','Comment'],['like','Like'],['follow','Follow'],['bookmark','Save prompts'],['report','Report prompts']];
 var KIND_LABEL={};KINDS.forEach(function(k){KIND_LABEL[k[0]]=k[1]});
 
@@ -94,7 +95,7 @@ $('tabs').addEventListener('click',function(e){
   b.classList.add('on');show(b.getAttribute('data-tab'));
 });
 
-var VIEWS={dashboard:vDashboard,reports:vReports,users:vUsers,prompts:vPrompts,comments:vComments,sanctions:vSanctions,log:vLog,settings:vSettings};
+var VIEWS={dashboard:vDashboard,reports:vReports,dmreports:vDmReports,users:vUsers,prompts:vPrompts,comments:vComments,sanctions:vSanctions,log:vLog,settings:vSettings};
 async function show(tab){current=tab;$('view').innerHTML='<div class="card status">Loading…</div>';await VIEWS[tab]()}
 function refresh(){show(current);if(detailUid)reloadDetail()}
 function empty(t){return '<div class="card status">'+t+'</div>'}
@@ -130,6 +131,39 @@ async function vReports(){
       '</div></div>';
   }).join('');
   $('repFilter').onchange=function(){st.reportStatus=this.value;vReports()};
+}
+
+/* ---------- message reports ---------- */
+var DM_TYPE_LABEL={text:'',image:'📷 Photo',video:'🎬 Video',audio:'🎤 Voice message',document:'📄 Document',location:'📍 Location',contact:'👤 Contact'};
+function dmContentHtml(r){
+  if(r.msg_type&&r.msg_type!=='text'){
+    var lbl=DM_TYPE_LABEL[r.msg_type]||r.msg_type;
+    return lbl+(r.media_url_snapshot?' — <a href="'+esc(r.media_url_snapshot)+'" target="_blank" rel="noopener">open attachment</a>':'');
+  }
+  return esc(r.body_snapshot||'(empty)');
+}
+async function vDmReports(){
+  var list=await call('phadm_message_reports',{p_status:st.dmReportStatus});
+  var head='<div class="adm-search"><select id="dmRepFilter">'+
+    ['open','resolved','dismissed','all'].map(function(x){return '<option value="'+x+'"'+(x===st.dmReportStatus?' selected':'')+'>'+x[0].toUpperCase()+x.slice(1)+'</option>'}).join('')+
+    '</select></div>';
+  if(!list||list===true||!list.length){$('view').innerHTML=head+empty('No reported messages.');$('dmRepFilter').onchange=function(){st.dmReportStatus=this.value;vDmReports()};return}
+  $('view').innerHTML=head+list.map(function(r){
+    var cls=r.status==='open'?'amber':(r.status==='resolved'?'green':'');
+    var nm=esc(r.sender_username||r.sender_name||'user');
+    return '<div class="card adm-row"><div class="top"><div class="grow"><b>Message from '+who(0,r.sender_username,r.sender_name)+'</b>'+
+      '<span>Reported by '+who(0,r.reporter_username,'someone')+' · '+fmt(r.created_at)+(r.still_exists?'':' · message already deleted by sender')+'</span></div>'+
+      '<span class="pill '+cls+'">'+esc(r.status)+'</span></div>'+
+      '<div class="body"><b>Message:</b> '+dmContentHtml(r)+'<br><b>Reason:</b> '+esc(r.reason||'')+(r.admin_note?'<br><b>Note:</b> '+esc(r.admin_note):'')+'</div>'+
+      '<div class="adm-actions">'+
+      (r.status==='open'?'<button class="btn" data-act="dmresolve" data-id="'+r.id+'">Resolve</button><button class="btn" data-act="dmdismiss" data-id="'+r.id+'">Dismiss</button>':'<button class="btn" data-act="dmreopen" data-id="'+r.id+'">Reopen</button>')+
+      (r.still_exists?'<button class="btn danger" data-act="dmdelmsg" data-id="'+r.message_id+'">Delete message</button>':'')+
+      '<button class="btn" data-act="warn" data-uid="'+r.sender_id+'" data-name="'+nm+'">Warn sender</button>'+
+      '<button class="btn danger" data-act="ban" data-uid="'+r.sender_id+'" data-name="'+nm+'">Block sender</button>'+
+      '<button class="btn" data-act="manage" data-uid="'+r.sender_id+'">Manage</button>'+
+      '</div></div>';
+  }).join('');
+  $('dmRepFilter').onchange=function(){st.dmReportStatus=this.value;vDmReports()};
 }
 
 /* ---------- users ---------- */
@@ -471,6 +505,12 @@ $('view').addEventListener('click',async function(e){
     if(act!=='reopen'){note=prompt('Note (optional):','');if(note===null)return}
     ok=await call('phadm_resolve_report',{p_id:id,p_status:act==='resolve'?'resolved':(act==='dismiss'?'dismissed':'open'),p_note:note});
   }
+  else if(act==='dmresolve'||act==='dmdismiss'||act==='dmreopen'){
+    var note2=null;
+    if(act!=='dmreopen'){note2=prompt('Note (optional):','');if(note2===null)return}
+    ok=await call('phadm_resolve_message_report',{p_id:id,p_status:act==='dmresolve'?'resolved':(act==='dmdismiss'?'dismissed':'open'),p_note:note2});
+  }
+  else if(act==='dmdelmsg'){if(!confirm('Delete this message?'))return;ok=await call('phadm_delete_message',{p_id:id})}
   else if(act==='save-ann'){ok=await call('phadm_set_announcement',{p_text:$('annText').value});if(ok)toast('Saved ✓','ok');return}
   else if(act==='save-limit'){ok=await call('phadm_set_warn_limit',{p_limit:parseInt($('warnLimit').value,10)});if(ok)toast('Saved ✓','ok');return}
   else if(act==='add-admin'){var em=$('newAdmin').value.trim();if(!em)return;ok=await call('phadm_add_admin',{p_email:em})}

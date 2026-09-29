@@ -127,6 +127,27 @@ async function openThread(uid){
   scrollBottom();
   db.rpc('dm_mark_read',{p_other:uid}).then(loadConvos);
 
+  $('chatMsgs').addEventListener('click',async function(e){
+    var d=e.target.closest('[data-del-msg]');
+    var r=e.target.closest('[data-report-msg]');
+    if(d){
+      if(!confirm('Delete this message for both of you?'))return;
+      var id=d.getAttribute('data-del-msg');
+      var res=await db.from('dm_messages').delete().eq('id',id);
+      if(res.error){alert(res.error.message);return}
+      msgs=msgs.filter(function(x){return x.id!==id});
+      renderMsgs();loadConvos();
+    }
+    if(r){
+      var reason=prompt('Why are you reporting this message?');
+      if(!reason||!reason.trim())return;
+      var id2=r.getAttribute('data-report-msg');
+      var res2=await db.rpc('dm_report_message',{p_message_id:id2,p_reason:reason.trim()});
+      if(res2.error){alert(res2.error.message);return}
+      alert('Reported. An admin will review it.');
+    }
+  });
+
   if(!blocked)renderInputArea();
 
   chan=db.channel('dm-'+me.id+'-'+uid)
@@ -328,6 +349,13 @@ function mediaBubbleHtml(m){
   }
   return null;
 }
+function bubbleActionsHtml(m){
+  var mine=m.sender_id===me.id;
+  return '<div class="bubble-actions">'+
+    (mine?'<button type="button" data-del-msg="'+m.id+'" title="Delete">🗑</button>'
+         :'<button type="button" data-report-msg="'+m.id+'" title="Report">🚩</button>')+
+    '</div>';
+}
 function renderMsgs(){
   var el=$('chatMsgs');if(!el)return;
   var lastDay='';
@@ -335,12 +363,14 @@ function renderMsgs(){
     var day=fmtDay(m.created_at);
     var head=day!==lastDay?'<div class="chat-day">'+day+'</div>':'';
     lastDay=day;
+    var mine=m.sender_id===me.id;
+    var wrapOpen='<div class="bubble-row '+(mine?'me':'them')+'">';
+    var wrapClose='</div>';
     if(m.msg_type&&m.msg_type!=='text'){
       var mh=mediaBubbleHtml(m);
-      if(mh)return head+mh;
+      if(mh)return head+wrapOpen+mh+bubbleActionsHtml(m)+wrapClose;
     }
-    var mine=m.sender_id===me.id;
-    return head+'<div class="bubble '+(mine?'me':'them')+'">'+esc(m.body)+'<span class="bubble-time">'+fmtTime(m.created_at)+'</span></div>';
+    return head+wrapOpen+'<div class="bubble '+(mine?'me':'them')+'">'+esc(m.body)+'<span class="bubble-time">'+fmtTime(m.created_at)+'</span></div>'+bubbleActionsHtml(m)+wrapClose;
   }).join('');
 }
 function scrollBottom(){var el=$('chatMsgs');if(el)el.scrollTop=el.scrollHeight}
