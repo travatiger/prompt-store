@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Messages — PromptHub</title>
+<link rel="manifest" href="manifest.webmanifest">
+<script>(function(){try{var t=localStorage.getItem('ph-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="account.html" id="navLogo"></a>
+    <div class="nav-right">
+      <a class="back" href="prompts.html">Prompts</a>
+      <a class="back" href="people.html">People</a>
+      <div id="phNotifMount"></div>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="container wide">
+  <div class="page-head">
+    <div><h1>Messages</h1><p>Private chat with people you follow or who follow you.</p></div>
+  </div>
+  <div class="card status" id="gate">Loading…</div>
+  <div class="chat-wrap" id="chatWrap" hidden>
+    <div class="chat-list" id="chatList"></div>
+    <div class="chat-pane" id="chatPane">
+      <div class="chat-empty" id="chatEmpty">Pick a conversation, or open someone's profile and tap Message.</div>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/common.js"></script>
+<script>
+(function(){'use strict';
+var PH=window.PH,db=PH.db,$=function(id){return document.getElementById(id)},esc=PH.esc;
+var DEF='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23e5e5e5"/></svg>';
+var me=null,convos=[],openWith=null,openProfile=null,msgs=[],chan=null;
+
+PH.bindThemeToggle('themeBtn');
+PH.mountLogo('navLogo');
+PH.mountNotifications('phNotifMount');
+
+function fmtTime(d){return new Date(d).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+function fmtDay(d){
+  var dt=new Date(d),today=new Date();
+  var sameDay=dt.toDateString()===today.toDateString();
+  if(sameDay)return 'Today';
+  var y=new Date();y.setDate(y.getDate()-1);
+  if(dt.toDateString()===y.toDateString())return 'Yesterday';
+  return dt.toLocaleDateString([],{month:'short',day:'numeric',year:dt.getFullYear()!==today.getFullYear()?'numeric':undefined});
+}
+
+async function init(){
+  var s=await db.auth.getSession();
+  me=s.data&&s.data.session?s.data.session.user:null;
+  if(!me){$('gate').innerHTML='Please <a href="account.html" style="text-decoration:underline">login</a> to use messages.';return}
+  $('gate').hidden=true;$('chatWrap').hidden=false;
+  await loadConvos();
+  var target=new URLSearchParams(location.search).get('u');
+  if(target)openThread(target);
+}
+
+async function loadConvos(){
+  var r=await db.rpc('dm_conversations');
+  convos=r.error?[]:(r.data||[]);
+  renderList();
+}
+function convoPreview(c){
+  var L={image:'📷 Photo',video:'🎬 Video',audio:'🎤 Voice message',document:'📄 Document',location:'📍 Location',contact:'👤 Contact'};
+  if(c.last_type&&c.last_type!=='text')return L[c.last_type]||c.last_type;
+  return c.last_body||'';
+}
+function renderList(){
+  if(!convos.length){$('chatList').innerHTML='<div class="chat-empty" style="padding:24px 16px">No conversations yet. Visit someone\'s profile and tap Message to start one.</div>';return}
+  $('chatList').innerHTML=convos.map(function(c){
+    var mine=c.last_sender===me.id;
+    return '<div class="chat-list-item'+(openWith===c.other_id?' active':'')+'" data-open="'+esc(c.other_id)+'">'+
+      '<img src="'+esc(c.avatar_url||DEF)+'" alt="">'+
+      '<div class="grow"><b>'+esc(c.full_name||c.username||'User')+PH.verifiedBadge(c.is_verified)+'</b><span class="prev">'+(mine?'You: ':'')+esc(convoPreview(c))+'</span></div>'+
+      '<div class="meta"><span class="time">'+PH.timeAgo(c.last_at)+'</span>'+(c.unread>0?'<span class="chat-badge">'+c.unread+'</span>':'')+'</div>'+
+      '</div>';
+  }).join('');
+}
+$('chatList').addEventListener('click',function(e){
+  var b=e.target.closest('[data-open]');if(!b)return;
+  openThread(b.getAttribute('data-open'));
+});
+
+async function openThread(uid){
+  if(chan){db.removeChannel(chan);chan=null}
+  openWith=uid;
+  history.replaceState(null,'','messages.html?u='+encodeURIComponent(uid));
+  $('chatWrap').classList.add('thread-open');
+  renderList();
+  $('chatPane').innerHTML='<div class="chat-empty">Loading…</div>';
+
+  var pr=await db.from('profiles').select('id,username,full_name,avatar_url,is_verified').eq('id',uid).maybeSingle();
+  openProfile=pr.data||{id:uid,full_name:'User'};
+
+  var can=await db.rpc('dm_can_message',{p_other:uid});
+  var blocked=can.data&&can.data.ok===false;
+
+  var t=await db.rpc('dm_thread',{p_other:uid,p_limit:100});
+  msgs=t.error?[]:(t.data||[]);
+
+  $('chatPane').innerHTML=
+    '<div class="chat-pane-head"><button class="btn chat-back" id="chatBackBtn" type="button">←</button>'+
+    '<img src="'+esc(openProfile.avatar_url||DEF)+'" alt="">'+
+    '<div class="grow"><b>'+esc(openProfile.full_name||'User')+PH.verifiedBadge(openProfile.is_verified)+'</b></div>'+
+    '<a class="btn" href="profile.html?u='+esc(uid)+'">Profile</a></div>'+
+    '<div class="chat-msgs" id="chatMsgs"></div>'+
+    '<div id="uploadNote" class="upload-note" hidden></div>'+
+    (blocked?'<div class="chat-empty" style="padding:12px">You can\'t message this person right now.</div>'
+      :'<div id="inputArea"></div>');
+
+  $('chatBackBtn').onclick=function(){$('chatWrap').classList.remove('thread-open')};
+  renderMsgs();
+  scrollBottom();
+  db.rpc('dm_mark_read',{p_other:uid}).then(loadConvos);
+
+  if(!blocked)renderInputArea();
+
+  chan=db.channel('dm-'+me.id+'-'+uid)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'dm_messages',filter:'sender_id=eq.'+uid},function(payload){
+      if(payload.new.receiver_id!==me.id)return;
+      msgs.push(payload.new);renderMsgs();scrollBottom();
+      db.rpc('dm_mark_read',{p_other:uid}).then(loadConvos);
+    })
+    .subscribe();
+}
+
+/* ---------- attachments / input area ---------- */
+var recording=false,mediaRecorder=null,recChunks=[],recStream=null,recStart=0,recTimer=null,uploading=false;
+
+function setUploading(t){
+  uploading=!!t;
+  var n=$('uploadNote');
+  if(n){n.hidden=!t;n.textContent=t?'Uploading…':''}
+}
+
+function renderInputArea(){
+  var el=$('inputArea');if(!el)return;
+  if(recording){
+    el.innerHTML='<div class="rec-row"><span class="rec-dot"></span><span id="recTime">0:00</span>'+
+      '<span style="flex:1"></span>'+
+      '<button class="btn" id="recCancel" type="button">Cancel</button>'+
+      '<button class="btn primary" id="recStop" type="button">Send</button></div>';
+    $('recCancel').onclick=function(){stopRecording(false)};
+    $('recStop').onclick=function(){stopRecording(true)};
+    return;
+  }
+  el.innerHTML='<div class="chat-input-row" style="position:relative">'+
+    '<button class="btn attach-btn" id="attachBtn" type="button">📎</button>'+
+    '<div class="attach-menu" id="attachMenu" hidden>'+
+    '<button type="button" data-a="photo">🖼️ Photo / Video</button>'+
+    '<button type="button" data-a="doc">📄 Document</button>'+
+    '<button type="button" data-a="loc">📍 Location</button>'+
+    '<button type="button" data-a="contact">👤 Contact</button>'+
+    '<button type="button" data-a="voice">🎤 Voice message</button>'+
+    '</div>'+
+    '<textarea id="chatInput" rows="1" maxlength="2000" placeholder="Message…"></textarea>'+
+    '<button class="btn primary" id="chatSend" type="button">Send</button>'+
+    '</div>'+
+    '<input type="file" id="fileMedia" accept="image/*,video/*" hidden>'+
+    '<input type="file" id="fileDoc" hidden>';
+
+  var send=$('chatSend'),input=$('chatInput'),attachBtn=$('attachBtn'),menu=$('attachMenu');
+  function doSend(){
+    var text=input.value;
+    if(!text.trim()||uploading)return;
+    input.value='';input.style.height='auto';
+    send.disabled=true;
+    db.from('dm_messages').insert({sender_id:me.id,receiver_id:openWith,body:text.trim(),msg_type:'text'}).select().single().then(function(r){
+      send.disabled=false;
+      if(r.error){alert(r.error.message);return}
+      msgs.push(r.data);renderMsgs();scrollBottom();loadConvos();
+    });
+  }
+  send.onclick=doSend;
+  input.oninput=function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'};
+  input.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend()}};
+
+  attachBtn.onclick=function(e){e.stopPropagation();menu.hidden=!menu.hidden};
+  document.addEventListener('click',function(e){if(menu&&!menu.hidden&&!menu.contains(e.target)&&e.target!==attachBtn)menu.hidden=true});
+  menu.addEventListener('click',function(e){
+    var b=e.target.closest('[data-a]');if(!b)return;
+    menu.hidden=true;
+    var a=b.getAttribute('data-a');
+    if(a==='photo')$('fileMedia').click();
+    else if(a==='doc')$('fileDoc').click();
+    else if(a==='loc')sendLocation();
+    else if(a==='contact')sendContact();
+    else if(a==='voice')startRecording();
+  });
+  $('fileMedia').onchange=function(e){var f=e.target.files[0];if(f)sendFile(f,f.type.indexOf('video/')===0?'video':'image');this.value=''};
+  $('fileDoc').onchange=function(e){var f=e.target.files[0];if(f)sendFile(f,'document');this.value=''};
+}
+
+function fmtSize(n){
+  if(!n)return '';
+  if(n<1024)return n+' B';
+  if(n<1024*1024)return Math.round(n/1024)+' KB';
+  return (n/1024/1024).toFixed(1)+' MB';
+}
+async function uploadDmFile(file){
+  var ext=((file.name||'file').split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'')||'bin';
+  var path='dm/'+me.id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
+  var up=await db.storage.from('product-media').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});
+  if(up.error)throw new Error(up.error.message);
+  return db.storage.from('product-media').getPublicUrl(path).data.publicUrl;
+}
+async function insertMsg(row){
+  var full=Object.assign({sender_id:me.id,receiver_id:openWith,body:''},row);
+  var r=await db.from('dm_messages').insert(full).select().single();
+  if(r.error){alert(r.error.message);return null}
+  msgs.push(r.data);renderMsgs();scrollBottom();loadConvos();
+  return r.data;
+}
+async function sendFile(file,kind){
+  if(file.size>25*1024*1024){alert('File is too big (max 25 MB).');return}
+  setUploading(true);
+  try{
+    var url=await uploadDmFile(file);
+    await insertMsg({msg_type:kind,media_url:url,media_name:file.name,media_size:file.size,media_mime:file.type||null});
+  }catch(err){alert(err.message)}
+  setUploading(false);
+}
+function sendLocation(){
+  if(!navigator.geolocation){alert('Location is not supported on this device/browser.');return}
+  setUploading(true);
+  navigator.geolocation.getCurrentPosition(function(pos){
+    setUploading(false);
+    insertMsg({msg_type:'location',lat:pos.coords.latitude,lng:pos.coords.longitude});
+  },function(){
+    setUploading(false);
+    alert('Could not get your location. Please allow location access and try again.');
+  },{enableHighAccuracy:true,timeout:10000});
+}
+async function sendContact(){
+  if(navigator.contacts&&navigator.contacts.select){
+    try{
+      var picked=await navigator.contacts.select(['name','tel'],{multiple:false});
+      if(picked&&picked.length){
+        var c=picked[0];
+        insertMsg({msg_type:'contact',contact_name:(c.name&&c.name[0])||'Contact',contact_phone:(c.tel&&c.tel[0])||''});
+        return;
+      }
+    }catch(e){}
+  }
+  var name=prompt('Contact name:');
+  if(name===null||!name.trim())return;
+  var phone=prompt('Phone number (optional):')||'';
+  insertMsg({msg_type:'contact',contact_name:name.trim(),contact_phone:phone.trim()});
+}
+async function startRecording(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){
+    alert('Voice messages are not supported on this device/browser.');return;
+  }
+  try{
+    recStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(e){alert('Microphone access was denied.');return}
+  recChunks=[];
+  var mime=(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported('audio/webm'))?'audio/webm':'';
+  mediaRecorder=mime?new MediaRecorder(recStream,{mimeType:mime}):new MediaRecorder(recStream);
+  mediaRecorder.ondataavailable=function(e){if(e.data&&e.data.size)recChunks.push(e.data)};
+  mediaRecorder.start();
+  recording=true;recStart=Date.now();
+  renderInputArea();
+  recTimer=setInterval(function(){
+    var el=$('recTime');if(!el)return;
+    var s=Math.floor((Date.now()-recStart)/1000);
+    el.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  },500);
+}
+function stopRecording(send){
+  if(mediaRecorder&&mediaRecorder.state!=='inactive'){
+    mediaRecorder.onstop=async function(){
+      if(recStream)recStream.getTracks().forEach(function(t){t.stop()});
+      clearInterval(recTimer);
+      recording=false;
+      var blob=new Blob(recChunks,{type:mediaRecorder.mimeType||'audio/webm'});
+      recChunks=[];
+      if(send&&blob.size>0){
+        setUploading(true);
+        try{
+          var file=new File([blob],'voice-message.webm',{type:blob.type});
+          var url=await uploadDmFile(file);
+          await insertMsg({msg_type:'audio',media_url:url,media_name:'Voice message',media_size:blob.size,media_mime:blob.type});
+        }catch(err){alert(err.message)}
+        setUploading(false);
+      }
+      renderInputArea();
+    };
+    mediaRecorder.stop();
+  }else{
+    recording=false;renderInputArea();
+  }
+}
+
+function mapUrl(lat,lng){return 'https://staticmap.openstreetmap.de/staticmap.php?center='+lat+','+lng+'&zoom=15&size=280x150&markers='+lat+','+lng+',red-pushpin'}
+function mediaBubbleHtml(m){
+  if(m.msg_type==='image'){
+    return '<div class="bubble media '+(m.sender_id===me.id?'me':'them')+'"><img class="bmedia" data-full="'+esc(m.media_url)+'" src="'+esc(m.media_url)+'" alt="">'+(m.body?'<div style="padding:6px 8px 2px">'+esc(m.body)+'</div>':'')+'<span class="bubble-time" style="padding:0 8px 6px;display:block">'+fmtTime(m.created_at)+'</span></div>';
+  }
+  if(m.msg_type==='video'){
+    return '<div class="bubble media '+(m.sender_id===me.id?'me':'them')+'"><video class="bmedia" src="'+esc(m.media_url)+'" controls></video><span class="bubble-time" style="padding:0 8px 6px;display:block">'+fmtTime(m.created_at)+'</span></div>';
+  }
+  if(m.msg_type==='audio'){
+    return '<div class="bubble media '+(m.sender_id===me.id?'me':'them')+'"><audio class="bmedia" src="'+esc(m.media_url)+'" controls></audio><span class="bubble-time" style="padding:0 8px 6px;display:block">'+fmtTime(m.created_at)+'</span></div>';
+  }
+  if(m.msg_type==='document'){
+    return '<div class="bubble media '+(m.sender_id===me.id?'me':'them')+'"><a class="doc-card" href="'+esc(m.media_url)+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none"><span class="ico">📄</span><div class="grow"><b>'+esc(m.media_name||'File')+'</b><span>'+fmtSize(m.media_size)+' · tap to open</span></div></a><span class="bubble-time" style="padding:0 8px 6px;display:block">'+fmtTime(m.created_at)+'</span></div>';
+  }
+  if(m.msg_type==='location'){
+    return '<div class="bubble media '+(m.sender_id===me.id?'me':'them')+'"><div class="loc-card"><img src="'+esc(mapUrl(m.lat,m.lng))+'" alt="Location"><a href="https://www.google.com/maps?q='+m.lat+','+m.lng+'" target="_blank" rel="noopener">📍 Open in Maps</a></div><span class="bubble-time" style="padding:0 8px 6px;display:block">'+fmtTime(m.created_at)+'</span></div>';
+  }
+  if(m.msg_type==='contact'){
+    return '<div class="bubble media '+(m.sender_id===me.id?'me':'them')+'"><div class="contact-card"><span class="ico">👤</span><div class="grow"><b>'+esc(m.contact_name||'Contact')+'</b>'+(m.contact_phone?'<span>'+esc(m.contact_phone)+'</span>':'')+'</div>'+(m.contact_phone?'<a class="btn" href="tel:'+esc(m.contact_phone)+'" style="flex:none">Call</a>':'')+'</div><span class="bubble-time" style="padding:0 8px 6px;display:block">'+fmtTime(m.created_at)+'</span></div>';
+  }
+  return null;
+}
+function renderMsgs(){
+  var el=$('chatMsgs');if(!el)return;
+  var lastDay='';
+  el.innerHTML=msgs.map(function(m){
+    var day=fmtDay(m.created_at);
+    var head=day!==lastDay?'<div class="chat-day">'+day+'</div>':'';
+    lastDay=day;
+    if(m.msg_type&&m.msg_type!=='text'){
+      var mh=mediaBubbleHtml(m);
+      if(mh)return head+mh;
+    }
+    var mine=m.sender_id===me.id;
+    return head+'<div class="bubble '+(mine?'me':'them')+'">'+esc(m.body)+'<span class="bubble-time">'+fmtTime(m.created_at)+'</span></div>';
+  }).join('');
+}
+function scrollBottom(){var el=$('chatMsgs');if(el)el.scrollTop=el.scrollHeight}
+document.addEventListener('click',function(e){
+  var img=e.target.closest('img.bmedia[data-full]');
+  if(img)window.open(img.getAttribute('data-full'),'_blank');
+});
+
+window.addEventListener('beforeunload',function(){if(chan)db.removeChannel(chan)});
+init();
+})();
+</script>
+</body>
+</html>
