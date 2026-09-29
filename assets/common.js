@@ -292,6 +292,25 @@
     reply: 'replied to your comment',
     follow: 'started following you'
   };
+  /* ---------- messages (chat) link + unread badge ---------- */
+  async function mountMessages(mountId) {
+    var mount = document.getElementById(mountId);
+    if (!mount) return;
+    var s = await api.db.auth.getSession();
+    var user = s.data && s.data.session ? s.data.session.user : null;
+    if (!user) { mount.innerHTML = ''; return; }
+    mount.style.position = 'relative';
+    mount.innerHTML = '<a class="back" href="messages.html" id="phMsgLink">Messages<span id="phMsgDot" class="notif-dot" style="position:absolute;top:2px;right:-4px" hidden></span></a>';
+    async function refresh() {
+      var r = await api.db.rpc('dm_unread_count');
+      var d = document.getElementById('phMsgDot');
+      if (d) d.hidden = !(r.data && r.data > 0);
+    }
+    if (window.__phMsgTimer) clearInterval(window.__phMsgTimer);
+    window.__phMsgTimer = setInterval(refresh, 20000);
+    refresh();
+  }
+
   async function mountNotifications(mountId) {
     var mount = document.getElementById(mountId);
     if (!mount) return;
@@ -455,6 +474,7 @@
     verifiedBadge: verifiedBadge,
     getBlockedSet: getBlockedSet,
     mountNotifications: mountNotifications,
+    mountMessages: mountMessages,
     mountNotices: mountNotices,
     db: null,
     initError: null
