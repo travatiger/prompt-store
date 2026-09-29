@@ -418,7 +418,7 @@ gridEl.addEventListener('click',async function(e){
   var tagChip=e.target.closest('[data-tag]');
 
   if(tagChip){var t=tagChip.getAttribute('data-tag');activeTag=(activeTag===t)?null:t;$('tagFilterNote').hidden=!activeTag;$('tagFilterNote').textContent=activeTag?('Tag: #'+activeTag+' ✕'):'';resetAndReload();return}
-  if(copyBtn){var p=all.concat(featured).find(x=>x.id===copyBtn.getAttribute('data-copy'));if(p){await PH.copyText(p.body);copyBtn.textContent='Copied ✓';setTimeout(()=>copyBtn.textContent='Copy',1200)}}
+  if(copyBtn){var p=all.concat(featured).find(x=>x.id===copyBtn.getAttribute('data-copy'));if(p){copyBtn.textContent='Ad…';setTimeout(async function(){await PH.copyText(p.body);copyBtn.textContent='Copied ✓';setTimeout(()=>copyBtn.textContent='Copy',1200)},1500)}}
   if(editBtn){startEdit(editBtn.getAttribute('data-edit'))}
   if(delBtn){doDelete(delBtn.getAttribute('data-del'))}
   if(likeBtn){toggleLike(likeBtn.getAttribute('data-like'))}
@@ -627,5 +627,7 @@ function updateWhoami(){
 init();
 })();
 </script>
+<!-- Adsterra Popunder -->
+<script src="https://pl31569175.profitableratecpmnetwork.com/b7/3f/a0/b73fa096cbd5ae302c899f907d25eaaa.js"></script>
 </body>
 </html>
