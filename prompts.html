@@ -323,6 +323,13 @@ function tagsHtml(p){
   if(!p.tags||!p.tags.length)return '';
   return '<div class="tag-row">'+p.tags.map(t=>'<span class="tag-chip'+(activeTag===t?' on':'')+'" data-tag="'+esc(t)+'">#'+esc(t)+'</span>').join('')+'</div>';
 }
+function fmtDateTime(iso){
+  if(!iso)return '';
+  var d=new Date(iso);
+  if(isNaN(d.getTime()))return '';
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+', '+
+         d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+}
 function cardHtml(p,isFeatured){
   var mine=me&&p.user_id===me.id;
   var author=p.profiles||{};
@@ -350,6 +357,7 @@ function cardHtml(p,isFeatured){
     '<div class="p-top"><span class="badge">'+(isFeatured?'⭐ ':'')+CAT_LABEL[p.category]+'</span>'+
     '<a class="p-author-link" href="profile.html?u='+esc(p.user_id)+'"><img src="'+esc(avatar)+'" alt="">'+esc(author.username?('@'+author.username):(author.full_name||'User'))+PH.verifiedBadge(author.is_verified)+'</a></div>'+
     '<h3 class="p-title">'+esc(p.title)+'</h3>'+
+    (p.created_at?'<div class="p-date">🕒 '+esc(fmtDateTime(p.created_at))+'</div>':'')+
     '<p class="p-body">'+esc(p.body)+'</p>'+
     media+
     tagsHtml(p)+
